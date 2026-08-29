@@ -25,7 +25,7 @@ class GPIOController:
         self._time_end = None
         self._start_time = None
         self._callback_on_stop_device = []
-        config = { # Only outputs so far 
+        config = { # Only outputs so far TODO TOTAL REWORK OF THIS 
             pin: gpiod.LineSettings(
                 direction=Direction.OUTPUT,
                 output_value=Value.ACTIVE
@@ -111,15 +111,15 @@ class GPIOController:
             logger.info(f"{'Started' if state == 1 else 'Stopped'} pump manually")
             self._dashboard_updater.update_active_section("Pompa została uruchomiona ręcznie" if state == 1 else "Urządzenie jest bezczynne")
     def choose_section(self, section_number: int): # Manual section choosing, mqtt handler
-        if section_number < 1 or section_number > 5:
+        if section_number < 1 or section_number > 5: #Make it dynamic with some json config (just like irrigation plan etc)
             logger.error(f"Invalid section number: {section_number}")
             return
         self._chosen_section = f"section{section_number}"
         logger.info(f"Chosen section: {self._chosen_section}")
-    def start_selected_section(self, state: int): # Manual section control, mqtt handler
+    def start_selected_section(self): # Manual section control, mqtt handler
 
         if self._irrigation_state ==  self.IrrigationState.IDLE:
-            if self._chosen_section is None:
+            if self._chosen_section is None or self._chosen_section == []:
                 self._chosen_section = "section1" # Default to section1 if no section chosen
             self._irrigation_state = self.IrrigationState.MANUAL_SECTION
             self.set_value(self._chosen_section, False)

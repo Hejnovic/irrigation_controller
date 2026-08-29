@@ -25,25 +25,9 @@ PORT = int(os.environ.get("MQTT_PORT"))
 TLS_ENABLED = os.environ.get("MQTT_TLS_ENABLED")
 ALL_TOPICS =  os.environ.get("MQTT_ALL_TOPICS").split(",") # Comma-separated list of topics to subscribe to, e.g. "downlink/ds/startSection,downlink/ds/runPump"
 DIR_PATH = Path(__file__).resolve().parent
-# PUMP_PIN = 2
-# SECTION_PIN1 = 3
-# SECIONT_PIN2 = 4
-# SECTION_PIN3 = 14
-# SECTION_PIN4 = 15
-# SECTION_PIN5 = 18
-# gpio = gpiod.request_lines(
-#     "/dev/gpiochip0",
-#     consumer = "irigation_controller",
-#     config = {
-#         PUMP_PIN: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE),
-#         SECTION_PIN1: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE),
-#         SECIONT_PIN2: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE),
-#         SECTION_PIN3: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE),
-#         SECTION_PIN4: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE),
-#         SECTION_PIN5: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)
-#     }
-# )
-PIN_CONFIG = {
+
+
+PIN_CONFIG = { #Make it dynamic from config file TODO TOTAL REWORK 
     "pump": 17,
     "section1": 22,
     "section2": 23,

@@ -185,3 +185,135 @@ def test_set_value_does_not_act_for_invalid_pin():
 
     #Assert
     controller._gpio.set_value.assert_not_called()
+
+##START SELECTED SECTION TESTS
+
+def test_start_selected_section_does_nothing_when_state_is_irrigating():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller.set_value = Mock()
+    controller.stop_device = Mock()
+
+    controller._irrigation_state = controller.IrrigationState.IRRIGATING
+    #Act
+
+    controller.start_selected_section()
+
+    #Assert
+    controller.set_value.assert_not_called
+    controller.stop_device.assert_not_called
+
+def test_start_selected_section_does_nothing_when_state_is_manual_pump():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller.set_value = Mock()
+    controller.stop_device = Mock()
+
+    controller._irrigation_state = controller.IrrigationState.MANUAL_PUMP
+    #Act
+
+    controller.start_selected_section()
+
+    #Assert
+    controller.set_value.assert_not_called
+    controller.stop_device.assert_not_called
+    assert controller._irrigation_state == controller.IrrigationState.MANUAL_PUMP
+
+def test_start_selected_section_stops_device_when_state_is_already_manual_section():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller.set_value = Mock()
+    controller.stop_device = Mock()
+
+    controller._irrigation_state = controller.IrrigationState.MANUAL_SECTION
+    #Act
+
+    controller.start_selected_section()
+
+    #Assert
+    controller.set_value.assert_not_called
+    controller.stop_device.assert_called_once
+    assert controller._irrigation_state == controller.IrrigationState.IDLE
+
+def test_start_selected_section_defaults_to_section1_when_chosen_section_is_none():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller._dashboard_updater = Mock()
+    controller.set_value = Mock()
+    controller.stop_device = Mock()
+    controller._chosen_section = None
+    controller._irrigation_state = controller.IrrigationState.IDLE
+    #Act
+
+    controller.start_selected_section()
+
+    #Assert
+    assert controller._chosen_section == "section1"
+    controller.set_value.assert_has_calls([call("pump",False),call("section1",False)],any_order=True)
+    controller._dashboard_updater.assert_called_once
+    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    controller.stop_device.assert_not_called
+
+def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empty_array():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller._dashboard_updater = Mock()
+    controller.set_value = Mock()
+    controller.stop_device = Mock()
+    controller._chosen_section = []
+    controller._irrigation_state = controller.IrrigationState.IDLE
+    #Act
+
+    controller.start_selected_section()
+
+    #Assert
+    assert controller._chosen_section == "section1"
+    controller.set_value.assert_has_calls([call("pump",False),call("section1",False)],any_order=True)
+    controller._dashboard_updater.assert_called_once
+    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    controller.stop_device.assert_not_called
+
+def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empty():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller._dashboard_updater = Mock()
+    controller.set_value = Mock()
+    controller.stop_device = Mock()
+    controller._chosen_section
+    controller._irrigation_state = controller.IrrigationState.IDLE
+    #Act
+
+    controller.start_selected_section()
+
+    #Assert
+    assert controller._chosen_section == "section1"
+    controller.set_value.assert_has_calls([call("pump",False),call("section1",False)],any_order=True)
+    controller._dashboard_updater.assert_called_once
+    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    controller.stop_device.assert_not_called
+
+def test_start_selected_section_runs_chosen_section():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller._dashboard_updater = Mock()
+    controller.set_value = Mock()
+    controller.stop_device = Mock()
+    controller._chosen_section = "section3"
+    controller._irrigation_state == controller.IrrigationState.IDLE
+    #Act
+
+    controller.start_selected_section()
+
+    #Assert
+    assert controller._chosen_section == "section3"
+    controller.set_value.assert_has_calls([call("pump",False),call("section3",False)],any_order=True)
+    controller._dashboard_updater.assert_called_once
+    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    controller.stop_device.assert_not_called
