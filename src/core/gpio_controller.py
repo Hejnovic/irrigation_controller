@@ -1,7 +1,7 @@
 import gpiod
 from gpiod.line import Direction, Value
 from typing import Dict
-# from ..utils.schedule_entry import ScheduleEntry
+from ..utils.schedule_entry import ScheduleEntry
 import logging
 logger = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ class GPIOController:
         MANUAL_PUMP = 2,
         MANUAL_SECTION = 3
     def __init__(self, pin_mapping: Dict[str, int], chip = "/dev/gpiochip0", consumer="irrigation_controller"):
-        self._daily_schedule = None
+        self._daily_schedule = ScheduleEntry | None
         self._pin_mapping = pin_mapping
         self._chosen_section = None
         self._time_manager = None
@@ -105,9 +105,13 @@ class GPIOController:
         return value == Value.ACTIVE
     ## MANUAL
     def run_pump(self, state: int): # Manual pump control, mqtt handler
-        if self._irrigation_state == self.IrrigationState.IDLE or self._irrigation_state == self.IrrigationState.MANUAL_PUMP:
+        if self._irrigation_state == self.IrrigationState.IRRIGATING:
+            logger.info("Already running auto irrigation")
+            return
+        prev_state = self._irrigation_state
+        self._irrigation_state = self.IrrigationState.MANUAL_PUMP if state == 1 else self.IrrigationState.IDLE
+        if prev_state != self._irrigation_state:
             self.set_value("pump", not state)
-            self._irrigation_state = self.IrrigationState.MANUAL_PUMP if state == 1 else self.IrrigationState.IDLE
             logger.info(f"{'Started' if state == 1 else 'Stopped'} pump manually")
             self._dashboard_updater.update_active_section("Pompa została uruchomiona ręcznie" if state == 1 else "Urządzenie jest bezczynne")
     def choose_section(self, section_number: int): # Manual section choosing, mqtt handler
@@ -136,12 +140,12 @@ class GPIOController:
         self._irrigation_state = self.IrrigationState.IRRIGATING
         self.set_value("pump", False)
         self._start_time = self._time_manager.current_hour_minute
-        self._sections_to_irrigate = sorted(self._pin_mapping.keys() - {"pump"})
+        self._sections_to_irrigate = sorted(self._pin_mapping.keys() - {"pump"}) #TODO Better way of getting all secionts (requires pin_config loading rework)
         self._switch_to_next_section()
     ## MANUAL END
     def stop_device(self):
         all_inactive = { #It is flipped because of relay module, setting pin to ACTIVE actually turns it off
-            pin: Value.ACTIVE for pin in self._pin_mapping.values()
+            pin: Value.ACTIVE for pin in self._pin_mapping.values() #TODO Rework after pin_config loading changes
         }
         self._gpio.set_values(all_inactive)
         self._start_time = None
@@ -169,12 +173,8 @@ class GPIOController:
         else:
             self.stop_device()
             logger.info("Irrigation sequence completed for all sections")
+
     def start_irrigation_auto(self):
-        #self._daily_schedule -> contains either sections to irrigate or "all" or None 
-        # If "all" -> irrigate all sections, if list of sections -> irrigate those sections, if None or empty -> do nothing
-        # After starting irrigation, should set a timer for each section based on the schedule and time manager, after timer is up, switch to next section or stop irrigation if no more sections left.
-        # TODO: or NOT TODO -> fetch irrigation schedule here instead of day_loop callback -> thinking about it you can't because schedule time also contains START TIME so HOW THE HELLY WOULD THIS FUNCTION KNOW WHEN TO START HAHAH
-        # If want to implement schedule changes without day_loop delay watchdog needs to callback set_daily_schedule function of gpio controller and then that function needs to fetch data from scheduler 
         if not self._daily_schedule.sections:
             logger.info("No sections to irrigate, skipping irrigation")
             return
@@ -208,13 +208,19 @@ class GPIOController:
         if self._daily_schedule.start_time is None or self._daily_schedule.sections == []:
             return
         current_time = self._time_manager.current_hour_minute
-        if current_time == self._daily_schedule.start_time:
+        if current_time == self._daily_schedule.start_time: # Whole minute to start irrigation program
             logger.info(f"Starting irrigation sequence at {self._time_manager.current_datetime} - {self._time_manager.current_day_of_week}")
             self._irrigation_state = self.IrrigationState.IRRIGATING
             self._start_time = self._daily_schedule.start_time
             self.start_irrigation_auto()
-    def set_daily_schedule(self,new_day): #TODO if want after save file change - add caller as parameter and then if caller is watchdog - get current day from time manager and then fetch schedule from scheduler 
-        self._daily_schedule = self._scheduler.get_schedule_for_day(new_day)
+    def set_daily_schedule(self,new_day): 
+        temp_schedule = self._scheduler.get_schedule_for_day(new_day)
+        if isinstance(temp_schedule,ScheduleEntry):
+            self._daily_schedule = temp_schedule
+        else:
+            #Put empty schedule with warning
+            self._daily_schedule = ScheduleEntry(start_time=None,sections=[])
+            logger.warning("Scheduler provided bad data, swapping for empty ScheduleEntry")
         logger.info(f"Received daily schedule: {self._daily_schedule}")
     def cleanup(self):
         if not hasattr(self, '_gpio') or self._gpio is None:
