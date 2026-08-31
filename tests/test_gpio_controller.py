@@ -176,7 +176,7 @@ def test_set_value_turns_on_pin():
     controller.set_value("pump", True)
 
     #Assert
-    controller._gpio.set_value.assert_called_once_with(17, Value.ACTIVE)
+    controller._gpio.set_value.assert_called_once_with(PIN_CONFIG["pump"], Value.ACTIVE)
 
 def test_set_value_turns_off_pin():
     #Arrange
@@ -188,7 +188,21 @@ def test_set_value_turns_off_pin():
     controller.set_value("section1", False)
 
     #Assert
-    controller._gpio.set_value.assert_called_once_with(27, Value.INACTIVE)
+    controller._gpio.set_value.assert_called_once_with(PIN_CONFIG["section1"], Value.INACTIVE)
+
+@pytest.mark.parametrize("input",["string",ScheduleEntry(start_time="12:00",sections=["all"]),2,None,-5])
+def test_set_value_does_nothing_on_wrong_input(input):
+    #Arrange
+    from gpiod.line import Value
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    
+
+    #Act
+    controller.set_value("pump", input)
+
+    #Assert
+    controller._gpio.set_value.assert_not_called()
 
 def test_set_value_does_not_act_for_invalid_pin():
     #Arrange
@@ -333,7 +347,6 @@ def test_start_selected_section_runs_chosen_section():
     controller.stop_device.assert_not_called()
 
 ## CHOSE SECTION TESTS
-
 def test_chose_section_does_nothing_when_section_out_of_range():   
     #Arrange 
     controller = GPIOController(PIN_CONFIG)
@@ -359,7 +372,6 @@ def test_chose_section_changes_section_to_selected():
     assert controller._chosen_section == "section2"
 
 ## RUN PUMP TESTS
-
 def test_run_pump_starts_when_irrigation_state_is_idle():   
     #Arrange 
     controller = GPIOController(PIN_CONFIG)
@@ -436,7 +448,6 @@ def test_run_pump_does_not_interrupt_auto_irrigation():
     assert controller._irrigation_state == controller.IrrigationState.IRRIGATING
 
 ## CHECK IF SHOULD START IRRIGATION TESTS
-
 def test_check_if_should_start_irrigation_runs_when_device_is_idle_and_all_requirments_are_met():
     #Arrange
     controller = GPIOController(PIN_CONFIG)
@@ -574,3 +585,169 @@ def test_set_daily_schedule_does_not_set_none_as_schedule():
     assert isinstance(controller._daily_schedule, ScheduleEntry)
     assert controller._daily_schedule == ScheduleEntry(start_time=None,sections=[])
 
+## SET TIME MANAGER TESTS
+def test_set_time_manager_sets_callbacks():
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()   
+    time_manager = Mock()
+
+    #Act
+    controller.set_time_manager(time_manager=time_manager)
+
+    #Assert
+    controller._time_manager.set_callback_on_day_change.assert_called()
+    controller._time_manager.set_callback_on_minute_change.assert_called()
+
+
+## SET_X TESTS
+@pytest.mark.parametrize("module",["time_manager","scheduler","dashboard_updater"])
+def test_set_x_sets_module(module):
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock() 
+    the_module = Mock()
+    set_module = getattr(controller,f"set_{module}")
+
+    #Act
+    set_module(the_module)
+
+
+    #Assert
+    private_module = getattr(controller,f"_{module}")
+    assert private_module == the_module
+
+@pytest.mark.parametrize("module",["time_manager","scheduler","dashboard_updater"])
+def test_set_x_does_not_overrite_x_module(module):
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()   
+    private_module = getattr(controller,f"_{module}")
+    private_module = Mock()
+    the_module = Mock()
+    set_module = getattr(controller,f"set_{module}")
+
+    #Act
+    set_module(the_module)
+
+
+    #Assert
+    assert private_module != the_module
+
+## SET VALUES TESTS
+def test_set_values_sets_pins_from_correctly_build_dict():
+    #Arrange
+    values_dict = {"pump":False,"section1":True,"section2":False}
+    from gpiod.line import Value
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+
+    #Act
+    controller.set_values(values_dict)
+
+    #Assert
+    controller._gpio.set_value.assert_has_calls([call(PIN_CONFIG["pump"],Value.INACTIVE),call(PIN_CONFIG["section1"],Value.ACTIVE),call(PIN_CONFIG["section2"],Value.INACTIVE)])
+
+
+def test_set_values_ignores_pins_that_do_not_exist():
+    #Arrange
+    values_dict = {"pump":False,"section1":True,"section3":False,"section5":False,"pump2":True}
+    from gpiod.line import Value
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+
+    #Act
+    controller.set_values(values_dict)
+
+    #Assert
+    controller._gpio.set_value.assert_has_calls([call(PIN_CONFIG["pump"],Value.INACTIVE),call(PIN_CONFIG["section1"],Value.ACTIVE)])
+
+def test_set_values_does_nothing_when_values_are_not_bool():
+    #Arrange
+    values_dict = {"pump":"lol","section1":None,"section2":[],"section5":ScheduleEntry(start_time=None,sections=None)}
+    from gpiod.line import Value
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+
+    #Act
+    controller.set_values(values_dict)
+
+    #Assert
+    controller._gpio.set_value.assert_not_called()
+
+## SET CALLBACK ON DEVICE STOP TESTS
+def test_set_callback_on_stop_device_sets_callback():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    callback1 = Mock(__name__ = "callback1")
+
+    #Act
+    controller.set_callback_on_stop_device(callback1)
+
+    #Assert
+    assert len(controller._callback_on_stop_device) == 1
+
+@pytest.mark.parametrize("callback",[object(),"callback123",[],(),123,ScheduleEntry(start_time=None,sections=["all"])])
+def test_set_callback_on_stop_device_does_not_set_non_callable(callback):
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+
+    
+    #Act
+    controller.set_callback_on_stop_device(callback)
+
+    #Assert
+    assert controller._callback_on_stop_device == []
+
+## CLEANUP TESTS
+def test_cleanup_calls_stop_device_and_sets_gpio_to_none():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller.stop_device = Mock()
+
+    #Act
+    controller.cleanup()
+
+    #Assert
+    controller.stop_device.assert_called_once()
+    assert controller._gpio is None
+
+def test_cleanup_does_nothing_when_called_when_gpio_is_none():
+    #Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller._gpio.reset_mock()
+    controller.stop_device = Mock()
+    controller._gpio = None
+
+    #Act
+    controller.cleanup()
+
+    #Assert
+    controller.stop_device.assert_not_called()
+    assert controller._gpio is None
+
+# EXIT TESTS
+def test_exit_calls_cleanup():
+    # Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller.cleanup = Mock()
+
+    # Act
+    result = controller.__exit__(None, None, None)
+
+    # Assert
+    controller.cleanup.assert_called_once()
+    assert result is None
+
+def test_exit_occurs_when_exception_rised():
+    # Arrange
+    controller = GPIOController(PIN_CONFIG)
+    controller.cleanup = Mock()
+
+    #Act
+    result = controller.__exit__(RuntimeError,RuntimeError("test"),None,)
+
+    #Assert
+    controller.cleanup.assert_called_once()
+    assert result is None
