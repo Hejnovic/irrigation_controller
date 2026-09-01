@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class ConfigWatcher:
     def __init__(self,config_dir: str | Path = "config"): ## ../configs but it is nested - eg ../configs/irigation_configs -> configs for irrigation controller
         self._config_dir = Path(config_dir).resolve()
-        self._handlers: dict[str, Callable[[Path], None]] = {}
+        self._handlers: dict[Path, Callable[[Path], None]] = {}
         
     def register_handler(self, filename: str, handler: Callable[[Path], None]):
         for file_path in self._config_dir.rglob(filename):

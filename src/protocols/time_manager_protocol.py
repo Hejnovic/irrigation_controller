@@ -1,0 +1,39 @@
+from typing import Protocol
+
+class TimeManagerProtocol(Protocol):
+
+    def time_now(self):
+        ...
+
+    def elapsed_time(self):
+        ...
+
+    def reset_timer(self):
+        ...
+
+    def current_day_of_week(self):
+        ...
+
+    def current_month(self):
+        ...
+
+    def current_datetime(self):
+        ...
+
+    def current_hour_minute(self):
+        ...
+
+    def current_minute(self):
+        ...
+
+    def set_callback_on_day_change(self,callback):
+        ...
+
+    def set_callback_on_minute_change(self,callback):
+        ...
+
+    def update_day(self):
+        ...
+
+    def update_time(self):
+        ...

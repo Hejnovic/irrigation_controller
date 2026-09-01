@@ -1,15 +1,15 @@
-from typing import List, Dict, Optional
 from ..utils.schedule_entry import ScheduleEntry
 import json
 import logging
 from pathlib import Path
-from typing import Callable, List
+from collections.abc import Callable
+from ..protocols.time_manager_protocol import TimeManagerProtocol
 logger = logging.getLogger(__name__)
 
     
 class Scheduler:
     def __init__(self):
-        self._schedule: Dict[str, ScheduleEntry] = { #Default schedule, can be loaded from config file
+        self._schedule: dict[str, ScheduleEntry] = { #Default schedule, can be loaded from config file
             "Monday": ScheduleEntry(start_time="04:00", sections=["all"]),
             "Tuesday": ScheduleEntry(start_time="04:00", sections=["section3"]),
             "Wednesday": ScheduleEntry(start_time="04:00", sections=["all"]),
@@ -19,11 +19,13 @@ class Scheduler:
             "Sunday": ScheduleEntry(start_time=None, sections=[])
         }
         self._default_irrigation_time = 10
+        self._adjustment = 0 # In %
         self._time_manager = None
-        self._specific_section_irrigation_time = {"section3": 25} # minutes, can be loaded from config file
-        self._winter_months = ["October","November", "December", "January", "February", "March"] # can be loaded from config file
-        self._callbacks_on_schedule_change: List[Callable[[], None]] = []
-    def set_time_manager(self, time_manager):
+        self._specific_section_irrigation_time: dict[str,int] = {} # minutes, can be loaded from config file
+        self._winter_months = [] # can be loaded from config file
+        self._callbacks_on_schedule_change: list[Callable[..., None]] = []
+
+    def set_time_manager(self, time_manager: TimeManagerProtocol):
         if time_manager is None:
             logger.error("Cannot set None as time manager")
             return
@@ -34,7 +36,7 @@ class Scheduler:
         logger.info("Time manager set for Scheduler")
     
     def get_irrigation_time(self, section_name: str) -> int:
-        return self._specific_section_irrigation_time.get(section_name, self._default_irrigation_time)
+        return self._specific_section_irrigation_time.get(section_name, self._default_irrigation_time)*(1+self._adjustment)
     
     def get_schedule_for_day(self, day_of_week: str) -> ScheduleEntry:
         month = self._time_manager.current_month
@@ -43,7 +45,10 @@ class Scheduler:
             return ScheduleEntry(start_time=None, sections=[])
         return self._schedule.get(day_of_week, ScheduleEntry(start_time=None, sections=[]))
     
-    def set_callback_on_schedule_change(self, callback):
+    def set_callback_on_schedule_change(self, callback: Callable):
+        if not callable(callback):
+            logger.warning(f"Can't set non-callable as callback: {callback}")
+            return
         if callback not in self._callbacks_on_schedule_change:
             self._callbacks_on_schedule_change.append(callback)
             logger.info(f"Registered schedule change callback: {callback.__name__}")
@@ -55,9 +60,13 @@ class Scheduler:
             logger.warning(f"Irrigation schedule config file not found at {json_file_path}. Using default irrigation times.")
             return
         with open(json_file_path, 'r') as f:
-            data = json.load(f)
-        for day, entry in data.items(): # Don't need to clear existing cuz schedule is expected always defined for all days
-            self._schedule[day] = ScheduleEntry(start_time=entry.get("start_time"), sections=entry.get("sections", []))
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
+                return
+        for day, entry in data.items(): # Don't need to clear existing cuz schedule is expected always defined for all days, defining only few days will leave other entries unaffected
+            self._schedule[day] = ScheduleEntry(start_time=entry.get("start_time",None), sections=entry.get("sections", []))
         ## pass schedule to gpio controller as well
         for callback in self._callbacks_on_schedule_change:
             try:
@@ -72,8 +81,12 @@ class Scheduler:
         if not json_file_path.is_file():
             logger.warning(f"Irrigation times config file not found at {json_file_path}. Using default irrigation times.")
             return
-        with open(json_file_path, 'r') as f: 
-            data = json.load(f)
+        with open(json_file_path, 'r') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
+                return
         self._specific_section_irrigation_time = {} # Clear existing
         for section, time in data.items():
             if section == "default":
@@ -88,8 +101,27 @@ class Scheduler:
         if not json_file_path.is_file():
             logger.warning(f"Winter months config file not found at {json_file_path}. Using default winter months.")
             return
-        with open(json_file_path, 'r') as f: 
-            data = json.load(f)
+        with open(json_file_path, 'r') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
+                return
         self._winter_months = data
         logger.info(f"Winter months loaded from {json_file_path}")
-    
+
+    def load_weather_adjustment_from_json_file(self,json_file_path: Path):
+        #Example: {adj_percentage: 25, total_pop: 0.5, days_analyzed: 5, avg_max_temps: 26.43, max_temp: 28.95}
+        #This is run by cron job - when error is occured maybe just rerun cron job?
+        logger.info(f"Loading weather adjustments from {json_file_path}")
+        if not json_file_path.is_file():
+            logger.warning(f"Weather adjustment config file at {json_file_path} not found. Not taking adjustments to irrigation times")
+            return
+        with open(json_file_path, 'r') as f:
+            try:
+                data = json.load(f) 
+                self._adjustment = round(data.get("adj_percentage",0)/100,2)
+                logger.info(f"Adjustment loaded: {self._adjustment}")
+            except json.JSONDecodeError as e:
+                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
+                return

@@ -2,6 +2,9 @@ import gpiod
 from gpiod.line import Direction, Value
 from ..utils.schedule_entry import ScheduleEntry
 from collections.abc import Callable
+from ..protocols.scheduler_protocol import SchedulerProtocol
+from ..protocols.time_manager_protocol import TimeManagerProtocol
+from ..protocols.dashboard_updater_protocol import DashboardUpdaterProtocol
 import logging
 logger = logging.getLogger(__name__)
 
@@ -10,21 +13,21 @@ class GPIOController:
         IDLE = 0,
         IRRIGATING = 1,
         MANUAL_PUMP = 2,
-        MANUAL_SECTION = 3
+        MANUAL_SECTION = 3,
+        ERROR = 4,
     def __init__(self, pin_mapping: dict[str, int], chip = "/dev/gpiochip0", consumer="irrigation_controller"):
         self._daily_schedule:ScheduleEntry =  ScheduleEntry(start_time=None,sections=[])
-        self._pin_mapping = pin_mapping
-        self._chosen_section = None
-        self._time_manager = None
-        self._scheduler = None
-        self._dashboard_updater = None
-        self._sections = None
+        self._pin_mapping: dict[str,int] = pin_mapping
+        self._chosen_section: str | None = None
+        self._time_manager: TimeManagerProtocol | None = None
+        self._scheduler: SchedulerProtocol | None = None
+        self._dashboard_updater: DashboardUpdaterProtocol | None  = None
         self._irrigation_state = self.IrrigationState.IDLE
-        self._sections_to_irrigate = []
-        self._current_section = None
+        self._sections_to_irrigate: list[str] = []
+        self._current_section: str | None = None
         self._time_end = None
         self._start_time = None
-        self._callback_on_stop_device = []
+        self._callback_on_stop_device: list[Callable] = []
         config = { # Only outputs so far TODO TOTAL REWORK OF THIS 
             pin: gpiod.LineSettings(
                 direction=Direction.OUTPUT,
@@ -40,7 +43,7 @@ class GPIOController:
         )
         logger.info(f"GPIO lines requested: {self._pin_mapping}")
 
-    def set_time_manager(self, time_manager):
+    def set_time_manager(self, time_manager: TimeManagerProtocol):
         if time_manager is None:
             logger.error("Cannot set None as time manager")
             return
@@ -53,7 +56,7 @@ class GPIOController:
         self._time_manager.set_callback_on_minute_change(self.check_if_should_switch_section)
         logger.info("Time manager set for GPIOController")
 
-    def set_scheduler(self, scheduler):
+    def set_scheduler(self, scheduler: SchedulerProtocol):
         if scheduler is None:
             logger.error("Cannot set None as scheduler")
             return
@@ -63,7 +66,7 @@ class GPIOController:
         self._scheduler = scheduler
         logger.info("Scheduler set for GPIOController")
 
-    def set_dashboard_updater(self, dashboard_updater):
+    def set_dashboard_updater(self, dashboard_updater: DashboardUpdaterProtocol):
         if dashboard_updater is None:
             logger.error("Cannot set None as dashboard updater")
             return
@@ -75,10 +78,10 @@ class GPIOController:
 
     def set_callback_on_stop_device(self, callback:Callable):
         if callback is None:
-            logger.warning("Cannot set None as callback for stop device")
+            logger.warning(f"Cannot set None as callback for stop device")
             return
         if not callable(callback):
-            logger.warning("Can not set non callable as callback for stop device")
+            logger.warning(f"Can not set non callable as callback for stop device: {callback}")
             return
         self._callback_on_stop_device.append(callback)
         logger.info(f"Registered stop device callback: {callback.__name__}")
@@ -137,7 +140,6 @@ class GPIOController:
             logger.info(f"Started irrigation for {self._chosen_section}")
             self._dashboard_updater.update_active_section(f"Ręcznie uruchomiono sekcję {self._chosen_section[-1]}")
         elif self._irrigation_state == self.IrrigationState.MANUAL_SECTION: 
-            self._irrigation_state = self.IrrigationState.IDLE
             self.stop_device()
 
     def start_manual_irrigation(self):
@@ -155,13 +157,13 @@ class GPIOController:
         all_inactive = { #It is flipped because of relay module, setting pin to ACTIVE actually turns it off
             pin: Value.ACTIVE for pin in self._pin_mapping.values() #TODO Rework after pin_config loading changes
         }
-        self._gpio.set_values(all_inactive)
+        self.set_values(all_inactive)
         self._start_time = None
         self._time_end = None
-        self._irrigation_state = self.IrrigationState.IDLE
         logger.info("Stopped irrigation and set all pins to INACTIVE")
         self._dashboard_updater.update_active_section("Urządzenie jest bezczynne")
         self._dashboard_updater.update_time_interval("") #Just makes it empty on frontend
+        self._irrigation_state = self.IrrigationState.IDLE
         for callback in self._callback_on_stop_device:
                 try:
                     callback()
@@ -172,6 +174,7 @@ class GPIOController:
         if self._sections_to_irrigate:
             self._current_section = self._sections_to_irrigate.pop(0) # popping 1st element of sorted (guaranteed by scheduler) list - modyfing in place so no need to track of index
             self.set_value(self._current_section, False)
+            self._irrigation_state = self.IrrigationState.IRRIGATING
             logger.info(f"Started irrigation for {self._current_section} - for {self._scheduler.get_irrigation_time(self._current_section)} minute(s)")
             if self._time_end is None:
                 irrigation_time = self._scheduler.get_irrigation_time(self._current_section)
@@ -218,7 +221,6 @@ class GPIOController:
         current_time = self._time_manager.current_hour_minute
         if current_time == self._daily_schedule.start_time: # Whole minute to start irrigation program
             logger.info(f"Starting irrigation sequence at {self._time_manager.current_datetime} - {self._time_manager.current_day_of_week}")
-            self._irrigation_state = self.IrrigationState.IRRIGATING
             self._start_time = self._daily_schedule.start_time
             self.start_irrigation_auto()
             

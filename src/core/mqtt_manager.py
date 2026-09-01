@@ -6,14 +6,14 @@ logger = logging.getLogger(__name__)
 
 class MQTTManager:
  
-    def __init__(self, broker_address:str, broker_port:int, username: str=None, password: str=None, TLS_enabled:bool=False, client_version=MQTTProtocolVersion.MQTTv311, callback=mqtt.CallbackAPIVersion.VERSION2, userdata=None):
+    def __init__(self, broker_address:str, broker_port:int, username: str ="", password: str="", TLS_enabled:bool=False, client_version=MQTTProtocolVersion.MQTTv311, callback=mqtt.CallbackAPIVersion.VERSION2, userdata=None):
         self._broker_address = broker_address
         self._broker_port = broker_port
         self._username = username
         self._password = password
         self._client = mqtt.Client(callback,protocol=client_version,userdata=userdata)
         self._client.reconnect_delay_set(min_delay=1, max_delay=120)
-        self._unnacked_messages = set() 
+        self._unnacked_messages: set[mqtt.MQTTMessageInfo] = set() 
         if username and password:
             self._client.username_pw_set(username, password)
             logger.info("MQTT client configured with username and password")

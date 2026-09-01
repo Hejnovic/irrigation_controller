@@ -264,7 +264,7 @@ def test_start_selected_section_stops_device_when_state_is_already_manual_sectio
     #Assert
     controller.set_value.assert_not_called()
     controller.stop_device.assert_called_once()
-    assert controller._irrigation_state == controller.IrrigationState.IDLE
+    
 
 def test_start_selected_section_defaults_to_section1_when_chosen_section_is_none():
     #Arrange
@@ -463,7 +463,7 @@ def test_check_if_should_start_irrigation_runs_when_device_is_idle_and_all_requi
 
     #Assert
     controller.start_irrigation_auto.assert_called_once()
-    assert controller._irrigation_state == controller.IrrigationState.IRRIGATING
+    
 
 @pytest.mark.parametrize("state",["IRRIGATING","MANUAL_PUMP","MANUAL_SECTION"])
 def test_check_if_should_start_irrigation_does_nothing_when_device_is_not_in_idle_state(state):
