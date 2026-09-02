@@ -152,6 +152,26 @@ def test_load_x_from_json_file_does_nothing_when_input_is_not_file(loader_functi
     assert scheduler._specific_section_irrigation_time == scheduler_snapshot._specific_section_irrigation_time
     assert scheduler._default_irrigation_time == scheduler_snapshot._default_irrigation_time
 
+@pytest.mark.parametrize("loader_function",["load_schedule_from_json_file","load_irrigation_times_from_json_file","load_winter_months_from_json_file","load_weather_adjustment_from_json_file"])
+def test_load_x_from_json_file_does_nothing_when_json_decode_error_occurs(tmp_path,loader_function):
+    #Arrange
+    import json
+    import copy
+    scheduler = Scheduler()
+    scheduler_snapshot = copy.deepcopy(scheduler)
+    json_file = tmp_path/"shedule.json"
+    json_file.write_text(" ")
+    loader = getattr(scheduler,loader_function)
+    #Act
+    loader(json_file)
+
+    #Assert
+    assert scheduler._schedule == scheduler_snapshot._schedule
+    assert scheduler._winter_months == scheduler_snapshot._winter_months
+    assert scheduler._adjustment == scheduler_snapshot._adjustment
+    assert scheduler._specific_section_irrigation_time == scheduler_snapshot._specific_section_irrigation_time
+    assert scheduler._default_irrigation_time == scheduler_snapshot._default_irrigation_time
+
 ## LOAD SCHEDULE FROM JSON FILE TESTS
 def test_load_schedule_from_json_file_loads_schedule_config(tmp_path):
     #Arrange
@@ -166,21 +186,7 @@ def test_load_schedule_from_json_file_loads_schedule_config(tmp_path):
     #Assert
     assert scheduler._schedule["Monday"] == ScheduleEntry(start_time="04:00",sections=["all"])
 
-
-def test_load_schedule_from_json_file_raise_exception_when_not_valid_json(tmp_path):
-    #Arrange
-    import json
-    scheduler = Scheduler()
-    json_file = tmp_path/"shedule.json"
-    json_file.write_text(" ")
-
-    #Act
-    scheduler.load_schedule_from_json_file(json_file)
-
-    #Assert
-    assert scheduler._schedule["Monday"] == ScheduleEntry(start_time="04:00",sections=["all"])
-
-def test_load_schedule_from_json_file_defaults_to_none_empty_array_when_fields_do_not_exist(tmp_path):
+def test_load_schedule_from_json_file_does_not_change_schedule_when_fields_do_not_exist(tmp_path):
     #Arrange
     import json
     scheduler = Scheduler()
@@ -191,5 +197,177 @@ def test_load_schedule_from_json_file_defaults_to_none_empty_array_when_fields_d
     scheduler.load_schedule_from_json_file(json_file)
 
     #Assert
-    assert scheduler._schedule["Monday"] == ScheduleEntry(start_time=None,sections=[])
+    assert scheduler._schedule["Monday"] == ScheduleEntry(start_time="04:00",sections=["all"])
 
+def test_load_shedule_from_json_sets_multiple_entries(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"shedule.json"
+    json_file.write_text('{"Monday":{"start_time":"04:00","sections":["all"]},' \
+    '"Tuesday":{"start_time":"04:00","sections":["all"]},' \
+    '"Wednesday":{"start_time":"04:00","sections":[]},' \
+    '"Thursday":{"start_time":"04:00","sections":["all"]}}')
+
+    #Act
+    scheduler.load_schedule_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._schedule == { "Monday":ScheduleEntry(start_time="04:00",sections=["all"]),
+                                    "Tuesday":ScheduleEntry(start_time="04:00",sections=["all"]),
+                                    "Wednesday":ScheduleEntry(start_time="04:00",sections=[]),
+                                    "Thursday":ScheduleEntry(start_time="04:00",sections=["all"]),
+                                    "Friday": ScheduleEntry(start_time=None, sections=[]),
+                                    "Saturday": ScheduleEntry(start_time='04:00', sections=['all']),
+                                    "Sunday": ScheduleEntry(start_time=None, sections=[])
+                                    }
+
+## LOAD IRRIGATION TIMES FROM JSON TESTS
+def test_load_irrigation_times_from_json_file_changes_deafault_irrigation_time(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"irrigation_times.json"
+    json_file.write_text('{"default":20}')
+
+    #Act
+    scheduler.load_irrigation_times_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._default_irrigation_time == 20
+
+def test_load_irrigation_times_from_json_file_changes_specific_irrigation_time(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"irrigation_times.json"
+    json_file.write_text('{"section1":20}')
+
+    #Act
+    scheduler.load_irrigation_times_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._specific_section_irrigation_time["section1"] == 20
+
+def test_load_irrigation_times_from_json_file_does_nothing_when_string_as_value(tmp_path):
+    #Arrange
+    import json
+    import copy
+    scheduler = Scheduler()
+    scheduler._default_irrigation_time = 15
+    json_file = tmp_path/"irrigation_times.json"
+    json_file.write_text('{"default":"bad_input"}')
+
+    #Act
+    scheduler.load_irrigation_times_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._default_irrigation_time == 15
+
+def test_load_irrigation_times_from_json_file_does_nothing_when_number_as_string_value(tmp_path):
+    #Arrange
+    import json
+    import copy
+    scheduler = Scheduler()
+    scheduler._default_irrigation_time = 15
+    json_file = tmp_path/"irrigation_times.json"
+    json_file.write_text('{"default":"50"}')
+
+    #Act
+    scheduler.load_irrigation_times_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._default_irrigation_time == 15
+
+## LOAD WINTER MONTHS FROM JSON FILE TESTS
+def test_load_winter_months_from_json_file_sets_months(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"winter_moths.json"
+    json_file.write_text('["January","February"]')
+
+    #Act
+    scheduler.load_winter_months_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._winter_months == ["January","February"]
+
+def test_load_winter_months_from_json_file_does_nothing_when_invalid_data_typ_in_array(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"winter_moths.json"
+    json_file.write_text('["January","February",123]')
+
+    #Act
+    scheduler.load_winter_months_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._winter_months == []
+
+def test_load_winter_months_from_json_file_does_nothing_when_input_is_not_array(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"winter_moths.json"
+    json_file.write_text('{"January":"Monday"}')
+
+    #Act
+    scheduler.load_winter_months_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._winter_months == []
+
+def test_load_winter_months_from_json_file_does_nothing_when_input_is_array_of_dicts(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"winter_moths.json"
+    json_file.write_text('[{"January":"Monday"},{"February":"Wednesday"},{"March":123}]')
+
+    #Act
+    scheduler.load_winter_months_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._winter_months == []
+
+def test_load_winter_months_from_json_file_does_nothing_when_input_is_array_of_arrays(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"winter_moths.json"
+    json_file.write_text('[[],[],[]]')
+
+    #Act
+    scheduler.load_winter_months_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._winter_months == []
+
+## LOAD WEATHER ADJUSTMENT FORM JSON FILE
+def test_load_weather_adjustment_from_json_file_loads_adjustment(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"weather_adjustment.json"
+    json_file.write_text('{"adj_percentage": 25, "total_pop": 0.5, "days_analyzed": 5, "avg_max_temps": 26.43, "max_temp": 28.95}')
+
+    #Act
+    scheduler.load_weather_adjustment_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._adjustment == round(25/100,2)
+
+def test_load_weather_adjustment_from_json_file_does_nothing_when_input_is_not_a_dict(tmp_path):
+    #Arrange
+    import json
+    scheduler = Scheduler()
+    json_file = tmp_path/"weather_adjustment.json"
+    json_file.write_text('[{"adj_percentage": 25, "total_pop": 0.5, "days_analyzed": 5, "avg_max_temps": 26.43, "max_temp": 28.95}]')
+    scheduler._adjustment = 10
+    #Act
+    scheduler.load_weather_adjustment_from_json_file(json_file)
+
+    #Assert
+    assert scheduler._adjustment == 10

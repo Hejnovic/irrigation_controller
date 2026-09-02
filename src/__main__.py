@@ -19,11 +19,12 @@ logger = logging.getLogger(__name__)
 
 load_logging_config_yml(logger=logger)
 
-BLYNK_AUTH = os.environ.get("BLYNK_AUTH")
-BROKER = os.environ.get("MQTT_BROKER")
-PORT = int(os.environ.get("MQTT_PORT"))
-TLS_ENABLED = bool(int(os.environ.get("MQTT_TLS_ENABLED")))
-ALL_TOPICS =  os.environ.get("MQTT_ALL_TOPICS").split(",") # Comma-separated list of topics to subscribe to, e.g. "downlink/ds/startSection,downlink/ds/runPump"
+
+BLYNK_AUTH = os.environ["BLYNK_AUTH"]
+BROKER = os.environ["MQTT_BROKER"]
+PORT = int(os.environ["MQTT_PORT"])
+TLS_ENABLED = bool(int(os.environ["MQTT_TLS_ENABLED"]))
+ALL_TOPICS =  os.environ["MQTT_ALL_TOPICS"].split(",") # Comma-separated list of topics to subscribe to, e.g. "downlink/ds/startSection,downlink/ds/runPump"
 DIR_PATH = Path(__file__).resolve().parent
 
 

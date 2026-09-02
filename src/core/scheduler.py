@@ -18,11 +18,11 @@ class Scheduler:
             "Saturday": ScheduleEntry(start_time="04:00", sections=["all"]),
             "Sunday": ScheduleEntry(start_time=None, sections=[])
         }
-        self._default_irrigation_time = 10
-        self._adjustment = 0 # In %
-        self._time_manager = None
+        self._default_irrigation_time:int = 10
+        self._adjustment:float = 0 # In %
+        self._time_manager:TimeManagerProtocol | None = None
         self._specific_section_irrigation_time: dict[str,int] = {} # minutes, can be loaded from config file
-        self._winter_months = [] # can be loaded from config file
+        self._winter_months: list[str] = [] # can be loaded from config file
         self._callbacks_on_schedule_change: list[Callable[..., None]] = []
 
     def set_time_manager(self, time_manager: TimeManagerProtocol):
@@ -53,6 +53,7 @@ class Scheduler:
             self._callbacks_on_schedule_change.append(callback)
             logger.info(f"Registered schedule change callback: {callback.__name__}")
 
+    ##TODO separate module that loads files - json/yaml etc
     def load_schedule_from_json_file(self, json_file_path: Path):
         #Example: {"Monday":{"start_time":"04:00","sections":["all"]}, "Wednesday": ... }
         logger.info(f"Loading irrigation schedule from {json_file_path}")
@@ -61,12 +62,18 @@ class Scheduler:
             return
         with open(json_file_path, 'r') as f:
             try:
-                data = json.load(f)
+                data: dict[str,dict] = json.load(f)
             except json.JSONDecodeError as e:
-                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
+                logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
                 return
+        ##TODO type checking 
         for day, entry in data.items(): # Don't need to clear existing cuz schedule is expected always defined for all days, defining only few days will leave other entries unaffected
-            self._schedule[day] = ScheduleEntry(start_time=entry.get("start_time",None), sections=entry.get("sections", []))
+            #Validate if entry has needed keys for setting up schedule
+            entry_keys = entry.keys()
+            if "start_time" in entry_keys and "sections" in entry_keys:
+                self._schedule[day] = ScheduleEntry(start_time=entry.get("start_time",None), sections=entry.get("sections", []))
+            else:
+                logger.error(f"Entry does not include mandatory fields: start_time and sections. Leaving schedule for day {day} unchanged")
         ## pass schedule to gpio controller as well
         for callback in self._callbacks_on_schedule_change:
             try:
@@ -83,16 +90,21 @@ class Scheduler:
             return
         with open(json_file_path, 'r') as f:
             try:
-                data = json.load(f)
+                data = json.load(f) 
             except json.JSONDecodeError as e:
-                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
+                logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
                 return
+        ##TODO type checking 
         self._specific_section_irrigation_time = {} # Clear existing
-        for section, time in data.items():
+        for section, value in data.items():
+            #Validate if entry has int value assigned to section
+            if type(value) is not int:
+                logger.error(f"Expected int and got {value} for {section}")
+                return
             if section == "default":
-                self._default_irrigation_time = time
+                self._default_irrigation_time = value
             else:    
-                self._specific_section_irrigation_time[section] = time
+                self._specific_section_irrigation_time[section] = value
         logger.info(f"Irrigation times loaded from {json_file_path}")
     
     def load_winter_months_from_json_file(self, json_file_path: Path):
@@ -107,11 +119,19 @@ class Scheduler:
             except json.JSONDecodeError as e:
                 logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
                 return
+        ##TODO type checking 
+        if type(data) is not list:
+            logger.error(f"Provided data is not a list")
+            return
+        for entry in data:
+            if type(entry) is not str:
+                logger.error(f"Provided entry {entry} in data is not string")
+                return
         self._winter_months = data
         logger.info(f"Winter months loaded from {json_file_path}")
 
     def load_weather_adjustment_from_json_file(self,json_file_path: Path):
-        #Example: {adj_percentage: 25, total_pop: 0.5, days_analyzed: 5, avg_max_temps: 26.43, max_temp: 28.95}
+        #Example: {"adj_percentage": 25, "total_pop": 0.5, "days_analyzed": 5, "avg_max_temps": 26.43, "max_temp": 28.95}
         #This is run by cron job - when error is occured maybe just rerun cron job?
         logger.info(f"Loading weather adjustments from {json_file_path}")
         if not json_file_path.is_file():
@@ -120,8 +140,12 @@ class Scheduler:
         with open(json_file_path, 'r') as f:
             try:
                 data = json.load(f) 
-                self._adjustment = round(data.get("adj_percentage",0)/100,2)
-                logger.info(f"Adjustment loaded: {self._adjustment}")
             except json.JSONDecodeError as e:
-                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
+                logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
                 return
+        ##TODO type checking
+        if not isinstance(data,dict):
+            logger.error(f"Provided data is not a dict")
+            return
+        self._adjustment = round(data.get("adj_percentage",0)/100,2)
+        logger.info(f"Adjustment loaded: {self._adjustment}")
