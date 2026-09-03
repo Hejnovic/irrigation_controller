@@ -95,5 +95,21 @@ async def test_watch(tmp_path,event,expected):
 
     #Assert
     getattr(callback,expected)()
+@pytest.mark.parametrize("filename",[".env","file.tmp","file~","../file.json","../../file.json"])
+@pytest.mark.asyncio
+async def test_watch(tmp_path,filename):
+    #Arrange
+    json_file_1 = tmp_path/filename
+    json_file_1.write_text('{}')
+    watchdog = ConfigWatcher(tmp_path)
+    callback = Mock(__name__ = "callback")
+    watchdog.register_handler(filename,callback)
+    async def fake_awatch(*args,**kwargs):
+        yield {(Change.added, tmp_path/filename)}
 
-    
+    #Act
+    with patch('src.utils.watchdog.awatch',fake_awatch):
+        await watchdog._watch()
+
+    #Assert
+    callback.assert_not_called()
