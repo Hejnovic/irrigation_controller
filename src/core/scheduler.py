@@ -36,7 +36,7 @@ class Scheduler:
         logger.info("Time manager set for Scheduler")
     
     def get_irrigation_time(self, section_name: str) -> int:
-        return self._specific_section_irrigation_time.get(section_name, self._default_irrigation_time)*(1+self._adjustment)
+        return round(self._specific_section_irrigation_time.get(section_name, self._default_irrigation_time)*(1+self._adjustment))
     
     def get_schedule_for_day(self, day_of_week: str) -> ScheduleEntry:
         month = self._time_manager.current_month
@@ -62,18 +62,26 @@ class Scheduler:
             return
         with open(json_file_path, 'r') as f:
             try:
-                data: dict[str,dict] = json.load(f)
+                data = json.load(f)
             except json.JSONDecodeError as e:
                 logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
                 return
-        ##TODO type checking 
+        #Type checking
+        if not isinstance(data,dict):
+            logger.error(f"Provided data is not a dict")
+            for day, entry in data.items():
+                if not isinstance(entry,dict):
+                    logger.error(f"The entry {entry} is not dict")
+                    return
+            return
+        # Can probably avoid looping twice on the same dict
         for day, entry in data.items(): # Don't need to clear existing cuz schedule is expected always defined for all days, defining only few days will leave other entries unaffected
             #Validate if entry has needed keys for setting up schedule
             entry_keys = entry.keys()
-            if "start_time" in entry_keys and "sections" in entry_keys:
-                self._schedule[day] = ScheduleEntry(start_time=entry.get("start_time",None), sections=entry.get("sections", []))
-            else:
-                logger.error(f"Entry does not include mandatory fields: start_time and sections. Leaving schedule for day {day} unchanged")
+            if "start_time" not in entry_keys and "sections" not in entry_keys:
+                logger.error(f"Entry does not include mandatory fields: start_time and sections. Leaving schedule for day {day} unchanged")  
+                continue  
+            self._schedule[day] = ScheduleEntry(start_time=entry.get("start_time",None), sections=entry.get("sections", []))
         ## pass schedule to gpio controller as well
         for callback in self._callbacks_on_schedule_change:
             try:
@@ -94,7 +102,10 @@ class Scheduler:
             except json.JSONDecodeError as e:
                 logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
                 return
-        ##TODO type checking 
+        #Type checking 
+        if not isinstance(data,dict):
+            logger.error("Provided data is not a dict")
+            return
         self._specific_section_irrigation_time = {} # Clear existing
         for section, value in data.items():
             #Validate if entry has int value assigned to section
@@ -103,8 +114,8 @@ class Scheduler:
                 return
             if section == "default":
                 self._default_irrigation_time = value
-            else:    
-                self._specific_section_irrigation_time[section] = value
+                continue
+            self._specific_section_irrigation_time[section] = value
         logger.info(f"Irrigation times loaded from {json_file_path}")
     
     def load_winter_months_from_json_file(self, json_file_path: Path):
@@ -119,7 +130,7 @@ class Scheduler:
             except json.JSONDecodeError as e:
                 logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
                 return
-        ##TODO type checking 
+        #Type checking 
         if type(data) is not list:
             logger.error(f"Provided data is not a list")
             return
@@ -143,9 +154,18 @@ class Scheduler:
             except json.JSONDecodeError as e:
                 logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
                 return
-        ##TODO type checking
+        #Type checking
         if not isinstance(data,dict):
             logger.error(f"Provided data is not a dict")
             return
-        self._adjustment = round(data.get("adj_percentage",0)/100,2)
+        if "adj_percentage" not in data.keys():
+            logger.error("Provided data does not iclude adjustment percentage")
+            return
+        if type(data["adj_percentage"]) is not int:
+            logger.error(f"Expected int and got value: {data["adj_percentage"]}")
+            return
+        self._adjustment = round(data["adj_percentage"]/100,2)
         logger.info(f"Adjustment loaded: {self._adjustment}")
+
+
+        

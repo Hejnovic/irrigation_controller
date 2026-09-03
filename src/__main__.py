@@ -41,7 +41,7 @@ PIN_CONFIG = { #Make it dynamic from config file TODO TOTAL REWORK
 cleanup_manager = CleanupManager()
 gpio_controller = GPIOController(PIN_CONFIG)
 scheduler = Scheduler()
-mqtt_manager = MQTTManager(BROKER, PORT, username="device", password=BLYNK_AUTH, TLS_enabled=TLS_ENABLED)
+mqtt_manager = MQTTManager(BROKER, PORT, username="device", password=BLYNK_AUTH, tls_enabled=TLS_ENABLED)
 time_manager = TimeManager()
 dashboard_updater = DashboardUpdater()
 watchdog = ConfigWatcher((DIR_PATH/"configs").resolve())

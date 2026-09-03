@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class MQTTManager:
  
-    def __init__(self, broker_address:str, broker_port:int, username: str ="", password: str="", TLS_enabled:bool=False, client_version=MQTTProtocolVersion.MQTTv311, callback=mqtt.CallbackAPIVersion.VERSION2, userdata=None):
+    def __init__(self, broker_address:str, broker_port:int, username: str ="", password: str="", tls_enabled:bool=False, client_version=MQTTProtocolVersion.MQTTv311, callback=mqtt.CallbackAPIVersion.VERSION2, userdata=None):
         self._broker_address = broker_address
         self._broker_port = broker_port
         self._username = username
@@ -17,7 +17,7 @@ class MQTTManager:
         if username and password:
             self._client.username_pw_set(username, password)
             logger.info("MQTT client configured with username and password")
-        if TLS_enabled:
+        if tls_enabled:
             self._client.tls_set()
             logger.info("MQTT client configured to use TLS")
 

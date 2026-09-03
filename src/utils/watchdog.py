@@ -9,11 +9,15 @@ class ConfigWatcher:
     def __init__(self,config_dir: str | Path = "config"): ## ../configs but it is nested - eg ../configs/irigation_configs -> configs for irrigation controller
         self._config_dir = Path(config_dir).resolve()
         self._handlers: dict[Path, Callable[[Path], None]] = {}
+        self._config_files: dict[str, Path] = {file.name:file for file in self._config_dir.rglob("*") if file.is_file()}
         
     def register_handler(self, filename: str, handler: Callable[[Path], None]):
-        for file_path in self._config_dir.rglob(filename):
-            self._handlers[file_path] = handler
-            logger.debug(f"Registered handler for {file_path}")
+        if filename not in self._config_files.keys():
+            logger.error(f"File {filename} not found in config files")
+            return
+        handler_path = self._config_files[filename]
+        self._handlers[handler_path] =handler
+        logger.info(f"Handler: {handler.__name__} is attached to file: {filename}")
 
     async def start(self):
         logger.info(f"Preloading existing config files on startup")
@@ -23,6 +27,10 @@ class ConfigWatcher:
                 logger.info(f"Preloading config from {file_path} on startup")
                 handler(file_path)
         logger.info(f"Starting config watcher on {self._config_dir}")
+        await self._watch()
+
+
+    async def _watch(self):
         async for changes in awatch(self._config_dir,debounce=500,watch_filter = lambda _,p: Path(p).is_file(), recursive=True):
             for change, file_path in changes:
                 file_path = Path(file_path)
@@ -35,4 +43,3 @@ class ConfigWatcher:
                         handler(file_path)
                     else:
                         logger.info(f"No handler registered for {file_path}")
-    

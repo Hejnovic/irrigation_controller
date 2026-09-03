@@ -61,19 +61,19 @@ def test_get_irrigation_time_returns_specified_time(key,value):
     returned_value = scheduler.get_irrigation_time(key)
 
     #Assert
-    assert returned_value == scheduler._specific_section_irrigation_time[key]
+    assert returned_value == value
 
 @pytest.mark.parametrize("adjustment",[0.7,-0.2,-0.5,1,0,-1,0.5])
 def test_get_irrigation_time_correclty_calculates_adjustment(adjustment):
     #Arrange
     scheduler = Scheduler()
     scheduler._adjustment = adjustment
-
+    scheduler._default_irrigation_time = 10
     #Act
     returned_value = scheduler.get_irrigation_time("section1")
 
     #Assert
-    assert returned_value == scheduler._default_irrigation_time*(1+scheduler._adjustment)
+    assert returned_value == round(10*(1+adjustment))
 
 
 ## GET SCHEDULE FOR DAY

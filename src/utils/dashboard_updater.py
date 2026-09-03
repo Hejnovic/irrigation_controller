@@ -27,6 +27,7 @@ class DashboardUpdater:
         self._time_manager = time_manager
         self._time_manager.set_callback_on_minute_change(self.update_datetime_dashboard)
         logger.info("Time manager set for DashboardUpdater")
+
     def update_datetime(self,_):
         if self._mqtt_manager is None:
             logger.error("MQTT manager not set for DashboardUpdater")
@@ -60,6 +61,7 @@ class DashboardUpdater:
             return
         self._mqtt_manager.publish("ds/timeInterval", time_interval)
         logger.debug(f"Dashboard updated with time interval: {time_interval}")
+        
     def reset_dashboard_buttons(self):
         if self._mqtt_manager is None:
             logger.error("MQTT manager not set for DashboardUpdater")
