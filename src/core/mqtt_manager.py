@@ -3,7 +3,7 @@ from paho.mqtt.enums import MQTTProtocolVersion
 import logging
 
 logger = logging.getLogger(__name__) 
-
+##TODO Total rework - it is now just paho.mqtt wrapper that is not even good
 class MQTTManager:
  
     def __init__(self, broker_address:str, broker_port:int, username: str ="", password: str="", tls_enabled:bool=False, client_version=MQTTProtocolVersion.MQTTv311, callback=mqtt.CallbackAPIVersion.VERSION2, userdata=None):

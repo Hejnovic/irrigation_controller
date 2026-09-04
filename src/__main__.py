@@ -4,7 +4,7 @@ from .utils.dashboard_updater import DashboardUpdater
 from .utils.cleanup_manager import CleanupManager
 from .core.gpio_controller import GPIOController
 from .core.scheduler import Scheduler
-from .utils.watchdog import ConfigWatcher
+from .utils.watchdog import Watchdog
 from .utils.load_logger_config_yml import load_logging_config_yml
 import os
 from pathlib import Path
@@ -44,7 +44,7 @@ scheduler = Scheduler()
 mqtt_manager = MQTTManager(BROKER, PORT, username="device", password=BLYNK_AUTH, tls_enabled=TLS_ENABLED)
 time_manager = TimeManager()
 dashboard_updater = DashboardUpdater()
-watchdog = ConfigWatcher((DIR_PATH/"configs").resolve())
+watchdog = Watchdog((DIR_PATH/"configs").resolve())
 
 
 def on_connect(client, userdata, flags, rc, properties=None):
@@ -112,7 +112,7 @@ async def main():
 
     await asyncio.gather(
         day_loop(),
-        watchdog.start()
+        watchdog.watch()
     )
 if __name__ == "__main__":
     # mqtt_manager.on_publish()
