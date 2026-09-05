@@ -114,6 +114,7 @@ async def main():
     watchdog.register_handler("irrigation_schedule.json", scheduler.load_schedule_from_json_file)
     watchdog.register_handler("irrigation_section_time.json", scheduler.load_irrigation_times_from_json_file)
     watchdog.register_handler("winter_months.json", scheduler.load_winter_months_from_json_file)
+    watchdog.register_handler("weather_adjustments.json",scheduler.load_weather_adjustment_from_json_file)
     watchdog.preload_configs()
     await asyncio.gather(
         day_loop(),

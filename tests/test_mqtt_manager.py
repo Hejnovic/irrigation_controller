@@ -53,7 +53,6 @@ def test_publish_calls_publish():
     #Assert
     mqtt_mock_client.publish.assert_called_once_with("topic","haha",0, False)
     
-
 def test_publish_add_callback_when_qos_greater_than_0():
     #Arrange
     mqtt_mock_client = Mock(spec=MqttClientProtocol)
@@ -63,10 +62,22 @@ def test_publish_add_callback_when_qos_greater_than_0():
     on_delivered = Mock()
     
     #Act
+    mid = mqtt_manager.publish("topic","haha",on_delivered= on_delivered,qos=1)
+
+    #Assert
+    assert mqtt_manager._on_delivered_cb[mid] == on_delivered
+
+def test_publish_add_timer_when_qos_greater_than_0():
+    #Arrange
+    mqtt_mock_client = Mock(spec=MqttClientProtocol)
+    mqtt_manager = MQTTManager(mqtt_mock_client,"abc",1883,"user","pw",True)
+    mqtt_mock_client.publish.return_value = 7
+    on_delivered = Mock()
+    
+    #Act
     with patch('src.core.mqtt_manager.threading.Timer') as MockTimer:
         mid = mqtt_manager.publish("topic","haha",on_delivered= on_delivered,qos=1)
         mock_timer = MockTimer.return_value
 
     #Assert
-    assert mqtt_manager._on_delivered_cb[mid] == on_delivered
     assert mqtt_manager._timers[mid] == mock_timer

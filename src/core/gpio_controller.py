@@ -15,6 +15,7 @@ class GPIOController:
         MANUAL_PUMP = 2,
         MANUAL_SECTION = 3,
         ERROR = 4,
+    
     def __init__(self, pin_mapping: dict[str, int], chip = "/dev/gpiochip0", consumer="irrigation_controller"):
         self._daily_schedule:ScheduleEntry =  ScheduleEntry(start_time=None,sections=[])
         self._pin_mapping: dict[str,int] = pin_mapping
