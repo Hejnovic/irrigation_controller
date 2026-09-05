@@ -11,7 +11,6 @@ class Watchdog:
         self._handlers: dict[Path, Callable[[Path], None]] = {}
         self._config_files: dict[str, Path] = {file.name:file for file in self._config_dir.rglob("*") if file.is_file()}
         self._tracking_dict: dict[str,Callable[[Path],None]] = {} #All handlers that were added but file didn't exist yet
-        self._preload_configs()
         
     def register_handler(self, file_name: str, handler: Callable[[Path], None]):
         if file_name not in self._config_files.keys(): #If file doesn't exist yet should add to future callbacks and then check when new file is added if the name is correct
@@ -25,7 +24,7 @@ class Watchdog:
         self._handlers[handler_path] =handler
         logger.info(f"Handler: {handler.__name__} is attached to file: {file_name}")
 
-    def _preload_configs(self):
+    def preload_configs(self):
         logger.info(f"Preloading existing config files on startup")
         ## Can preload existing config on startup of program if files exist
         for file_path, handler in self._handlers.items():
@@ -46,9 +45,10 @@ class Watchdog:
                     if handler:
                         self._handlers.pop(file_path)
                         #But should I add it to tracking dict so the same handler will automatically be assigned to the same file?
+                        #When it is like this after removing file it is needed to restart program to track it again - there is no way yet to add callbacks from any GUI
                         logger.info(f"Removed handler for existing file: {file_path.name}")
                     continue
-                if change is Change.added:
+                if change is Change.added: #Guarantees new file 
                     file_name = file_path.name
                     self._config_files[file_name] = file_path
                     #Check in tracking_dict if there is handler waiting for this file

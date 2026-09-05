@@ -43,8 +43,7 @@ def test_register_handler_does_nothing_when_file_does_not_exist(tmp_path):
     #Assert
     assert len(watchdog._handlers) == 0
 
-## START TESTS
-
+## PRELOAD CONFIG TESTS
 def test_preload_config_calls_handlers(tmp_path):
     #Arrange
     json_file_1 = tmp_path/"json_file_1.json"
@@ -56,13 +55,14 @@ def test_preload_config_calls_handlers(tmp_path):
 
 
     #Act
-    watchdog._preload_configs()
+    watchdog.preload_configs()
 
     #Assert
     callback.assert_called_with(tmp_path/"json_file_1.json")
 
 ## WATCH TESTS
-@pytest.mark.parametrize("event,expected",[("modified","assert_called_once"),("added","assert_not_called"),("deleted","assert_not_called"),])
+@pytest.mark.parametrize("event,expected",[("modified","assert_called_once"),("added","assert_not_called"),("deleted","assert_not_called"),]) 
+#assert_not_called for event added because the file already exist - there is nothing in the _tracking_dict so program should not try to assign callback to already existing file that gave event .added 
 @pytest.mark.asyncio
 async def test_watch_on_event(tmp_path,event,expected):
     #Arrange
@@ -123,8 +123,8 @@ async def test_watch_sets_callback_on_add_new_file(tmp_path):
     #Arrange
     watchdog = Watchdog(tmp_path)
     callback = Mock(__name__ = "callback1")
-    watchdog.register_handler("json_file_1.json",callback)
     watchdog._config_files = {}
+    watchdog.register_handler("json_file_1.json",callback)
     async def fake_awatch(*args,**kwargs):
         yield {(Change.added, tmp_path/"json_file_1.json")}
 
