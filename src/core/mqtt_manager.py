@@ -40,18 +40,22 @@ class MQTTManager:
         return mid
     
     def set_on_connect(self, on_connect_callback):
-        self._client.set_on_connect = on_connect_callback
-        logger.info("On connect callback has been set")
+        if self.check_if_callable(on_connect_callback):
+            self._client.set_on_connect(on_connect_callback)
+            logger.info("On connect callback has been set")
 
     def set_on_message(self, on_message_callback):
-        self._client.set_on_message = on_message_callback
-        logger.info("On message callback has been set")
+        if self.check_if_callable(on_message_callback):
+            self._client.set_on_message(on_message_callback)
+            logger.info("On message callback has been set")
 
     def set_on_disconnect(self, on_disconnect_callback):
-        self._client.set_on_disconnect = on_disconnect_callback
-        logger.info("On disconnect callback has been set")
+        if self.check_if_callable(on_disconnect_callback):
+            self._client.set_on_disconnect(on_disconnect_callback)
+            logger.info("On disconnect callback has been set")
 
     def subscribe(self,topics) -> None:
+        # Type checking should be done on adapter side - may vary between different implementations of mqtt client
         self._client.subscribe(topics)
         logger.info(f"Client has subscribed to the topics {topics}")
 
@@ -70,3 +74,6 @@ class MQTTManager:
         self._timers.pop(mid,None)
         if callback:
             callback(False)
+
+    def check_if_callable(self,obj) -> bool:
+        return callable(obj)
