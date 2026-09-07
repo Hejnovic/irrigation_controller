@@ -5,17 +5,13 @@ from collections.abc import Callable
 from ..protocols.scheduler_protocol import SchedulerProtocol
 from ..protocols.time_manager_protocol import TimeManagerProtocol
 from ..protocols.dashboard_updater_protocol import DashboardUpdaterProtocol
+from ..utils.enums import IrrigationState
 import logging
-from enum import IntEnum
+
 logger = logging.getLogger(__name__)
 
 class GPIOController:
-    class IrrigationState(IntEnum):
-        IDLE = 0,
-        IRRIGATING = 1,
-        MANUAL_PUMP = 2,
-        MANUAL_SECTION = 3,
-        ERROR = 4, #Not much useful without hardware monitoring tools
+
     
     def __init__(self, pin_mapping: dict[str, int], chip = "/dev/gpiochip0", consumer="irrigation_controller"):
         self._daily_schedule:ScheduleEntry =  ScheduleEntry(start_time=None,sections=[])
@@ -24,7 +20,7 @@ class GPIOController:
         self._time_manager: TimeManagerProtocol | None = None
         self._scheduler: SchedulerProtocol | None = None
         self._dashboard_updater: DashboardUpdaterProtocol | None  = None
-        self._irrigation_state = self.IrrigationState.IDLE
+        self._irrigation_state = IrrigationState.IDLE
         self._sections_to_irrigate: list[str] = []
         self._current_section: str | None = None
         self._time_end = None
@@ -115,15 +111,15 @@ class GPIOController:
     
     ## MANUAL
     def run_pump(self): # Manual pump control, mqtt handler
-        if self._irrigation_state == self.IrrigationState.IRRIGATING:
+        if self._irrigation_state == IrrigationState.IRRIGATING:
             logger.info("Already running auto irrigation")
             return
         prev_state = self._irrigation_state
-        self._irrigation_state = self.IrrigationState.MANUAL_PUMP if prev_state == self.IrrigationState.IDLE else self.IrrigationState.IDLE
+        self._irrigation_state = IrrigationState.MANUAL_PUMP if prev_state == IrrigationState.IDLE else IrrigationState.IDLE
         if prev_state != self._irrigation_state:
             self.set_value("pump", not bool(self._irrigation_state)) #.IDLE is 0  
-            logger.info(f"{'Started' if self.IrrigationState.MANUAL_PUMP else 'Stopped'} pump manually")
-            self._dashboard_updater.update_active_section("Pompa została uruchomiona ręcznie" if self._irrigation_state == self.IrrigationState.MANUAL_PUMP else "Urządzenie jest bezczynne")
+            logger.info(f"{'Started' if IrrigationState.MANUAL_PUMP else 'Stopped'} pump manually")
+            self._dashboard_updater.update_active_section("Pompa została uruchomiona ręcznie" if self._irrigation_state == IrrigationState.MANUAL_PUMP else "Urządzenie jest bezczynne")
 
     def choose_section(self, section_number: int): # Manual section choosing, mqtt handler
         if section_number < 1 or section_number > 5: #Make it dynamic with some json config (just like irrigation plan)
@@ -133,22 +129,22 @@ class GPIOController:
         logger.info(f"Chosen section: {self._chosen_section}")
 
     def start_selected_section(self): # Manual section control, mqtt handler
-        if self._irrigation_state ==  self.IrrigationState.IDLE:
+        if self._irrigation_state ==  IrrigationState.IDLE:
             if self._chosen_section is None or self._chosen_section == []:
                 self._chosen_section = "section1" # Default to section1 if no section chosen
-            self._irrigation_state = self.IrrigationState.MANUAL_SECTION
+            self._irrigation_state = IrrigationState.MANUAL_SECTION
             self.set_value(self._chosen_section, False)
             self.set_value("pump", False)
             logger.info(f"Started irrigation for {self._chosen_section}")
             self._dashboard_updater.update_active_section(f"Ręcznie uruchomiono sekcję {self._chosen_section[-1]}")
-        elif self._irrigation_state == self.IrrigationState.MANUAL_SECTION: 
+        elif self._irrigation_state == IrrigationState.MANUAL_SECTION: 
             self.stop_device()
 
     def start_manual_irrigation(self):
-        if self._irrigation_state != self.IrrigationState.IDLE:
+        if self._irrigation_state != IrrigationState.IDLE:
             logger.warning("Cannot start manual irrigation: device is already irrigating")
             return
-        self._irrigation_state = self.IrrigationState.IRRIGATING
+        self._irrigation_state = IrrigationState.IRRIGATING
         self.set_value("pump", False)
         self._start_time = self._time_manager.current_hour_minute
         self._sections_to_irrigate = sorted(self._pin_mapping.keys() - {"pump"}) #TODO Better way of getting all secionts (requires pin_config loading rework)
@@ -165,7 +161,7 @@ class GPIOController:
         logger.info("Stopped irrigation and set all pins to INACTIVE")
         self._dashboard_updater.update_active_section("Urządzenie jest bezczynne")
         self._dashboard_updater.update_time_interval("") #Just makes it empty on frontend
-        self._irrigation_state = self.IrrigationState.IDLE
+        self._irrigation_state = IrrigationState.IDLE
         for callback in self._callback_on_stop_device:
                 try:
                     callback()
@@ -176,7 +172,7 @@ class GPIOController:
         if self._sections_to_irrigate:
             self._current_section = self._sections_to_irrigate.pop(0) # popping 1st element of sorted (guaranteed by scheduler) list - modyfing in place so no need to track of index
             self.set_value(self._current_section, False)
-            self._irrigation_state = self.IrrigationState.IRRIGATING
+            self._irrigation_state = IrrigationState.IRRIGATING
             logger.info(f"Started irrigation for {self._current_section} - for {self._scheduler.get_irrigation_time(self._current_section)} minute(s)")
             if self._time_end is None:
                 irrigation_time = self._scheduler.get_irrigation_time(self._current_section)
@@ -199,7 +195,7 @@ class GPIOController:
         self._switch_to_next_section()
 
     def check_if_should_switch_section(self,_):
-        if self._irrigation_state != self.IrrigationState.IRRIGATING:
+        if self._irrigation_state != IrrigationState.IRRIGATING:
             return
         current_time = self._time_manager.current_hour_minute 
         if current_time >= self._time_end: # When current time is equal to start time + irrigation time for current section
@@ -209,7 +205,7 @@ class GPIOController:
             self._switch_to_next_section()
 
     def check_if_should_start_irrigation(self,_):
-        if self._irrigation_state != self.IrrigationState.IDLE:
+        if self._irrigation_state != IrrigationState.IDLE:
             logger.warning("Cannot start irrigation: device is not in IDLE state")
             return
         if self._daily_schedule is None:

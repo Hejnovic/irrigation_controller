@@ -59,7 +59,7 @@ class Watchdog:
                 #Code here handles .modified
                 handler = self._handlers.get(file_path)
                 if handler:
-                    logger.info(f"Detected change {str(change)} in {file_path}, invoking handler")
+                    logger.info(f"Detected change {str(change.name)} in {file_path}, invoking handler")
                     handler(file_path)
                 else:
                     logger.info(f"No handler registered for {file_path}")

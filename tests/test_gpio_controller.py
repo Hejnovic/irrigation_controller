@@ -1,5 +1,5 @@
 from unittest.mock import Mock, call
-
+from src.utils.enums import IrrigationState
 from src.core.gpio_controller import GPIOController
 from src.utils.schedule_entry import ScheduleEntry
 import pytest
@@ -95,7 +95,7 @@ def test_check_if_should_switch_section_triggers_when_time_reached_and_device_is
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.IRRIGATING
+    controller._irrigation_state = IrrigationState.IRRIGATING
     controller._switch_to_next_section = Mock()
     controller._time_end = "11:50"
     controller._time_manager.current_hour_minute = "11:50"
@@ -115,7 +115,7 @@ def test_check_if_should_switch_section_triggers_when_time_is_not_reached_and_de
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.IRRIGATING
+    controller._irrigation_state = IrrigationState.IRRIGATING
     controller._switch_to_next_section = Mock()
     controller._time_end = "11:50"
     controller._time_manager.current_hour_minute = "11:40"
@@ -134,7 +134,7 @@ def test_check_if_should_switch_section_does_not_trigger_when_device_is_idle():
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     controller._switch_to_next_section = Mock()
 
     #Act
@@ -151,7 +151,7 @@ def test_check_if_should_switch_section_does_not_trigger_when_device_is_idle_wit
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     controller._current_section = "section1"  # weird state
     controller._time_end = "11:50"
     controller._time_manager.current_hour_minute = "11:50"
@@ -223,7 +223,7 @@ def test_start_selected_section_does_nothing_when_state_is_irrigating():
     controller.set_value = Mock()
     controller.stop_device = Mock()
 
-    controller._irrigation_state = controller.IrrigationState.IRRIGATING
+    controller._irrigation_state = IrrigationState.IRRIGATING
     #Act
 
     controller.start_selected_section()
@@ -239,7 +239,7 @@ def test_start_selected_section_does_nothing_when_state_is_manual_pump():
     controller.set_value = Mock()
     controller.stop_device = Mock()
 
-    controller._irrigation_state = controller.IrrigationState.MANUAL_PUMP
+    controller._irrigation_state = IrrigationState.MANUAL_PUMP
     #Act
 
     controller.start_selected_section()
@@ -247,7 +247,7 @@ def test_start_selected_section_does_nothing_when_state_is_manual_pump():
     #Assert
     controller.set_value.assert_not_called()
     controller.stop_device.assert_not_called()
-    assert controller._irrigation_state == controller.IrrigationState.MANUAL_PUMP
+    assert controller._irrigation_state == IrrigationState.MANUAL_PUMP
 
 def test_start_selected_section_stops_device_when_state_is_already_manual_section():
     #Arrange
@@ -256,7 +256,7 @@ def test_start_selected_section_stops_device_when_state_is_already_manual_sectio
     controller.set_value = Mock()
     controller.stop_device = Mock()
 
-    controller._irrigation_state = controller.IrrigationState.MANUAL_SECTION
+    controller._irrigation_state = IrrigationState.MANUAL_SECTION
     #Act
 
     controller.start_selected_section()
@@ -274,7 +274,7 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_none
     controller.set_value = Mock()
     controller.stop_device = Mock()
     controller._chosen_section = None
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     #Act
 
     controller.start_selected_section()
@@ -283,7 +283,7 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_none
     assert controller._chosen_section == "section1"
     controller.set_value.assert_has_calls([call("pump",False),call("section1",False)],any_order=True)
     controller._dashboard_updater.update_active_section.assert_called_once()
-    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    assert controller._irrigation_state == IrrigationState.MANUAL_SECTION
     controller.stop_device.assert_not_called()
 
 def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empty_array():
@@ -294,7 +294,7 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empt
     controller.set_value = Mock()
     controller.stop_device = Mock()
     controller._chosen_section = []
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     #Act
 
     controller.start_selected_section()
@@ -303,7 +303,7 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empt
     assert controller._chosen_section == "section1"
     controller.set_value.assert_has_calls([call("pump",False),call("section1",False)],any_order=True)
     controller._dashboard_updater.update_active_section.assert_called_once()
-    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    assert controller._irrigation_state == IrrigationState.MANUAL_SECTION
     controller.stop_device.assert_not_called()
 
 def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empty():
@@ -314,7 +314,7 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empt
     controller.set_value = Mock()
     controller.stop_device = Mock()
     controller._chosen_section
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     #Act
 
     controller.start_selected_section()
@@ -323,7 +323,7 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empt
     assert controller._chosen_section == "section1"
     controller.set_value.assert_has_calls([call("pump",False),call("section1",False)],any_order=True)
     controller._dashboard_updater.update_active_section.assert_called_once()
-    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    assert controller._irrigation_state == IrrigationState.MANUAL_SECTION
     controller.stop_device.assert_not_called()
 
 def test_start_selected_section_runs_chosen_section():
@@ -334,7 +334,7 @@ def test_start_selected_section_runs_chosen_section():
     controller.set_value = Mock()
     controller.stop_device = Mock()
     controller._chosen_section = "section3"
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     #Act
 
     controller.start_selected_section()
@@ -343,7 +343,7 @@ def test_start_selected_section_runs_chosen_section():
     assert controller._chosen_section == "section3"
     controller.set_value.assert_has_calls([call("pump",False),call("section3",False)],any_order=True)
     controller._dashboard_updater.update_active_section.assert_called_once()
-    assert controller._irrigation_state == controller.IrrigationState.MANUAL_SECTION
+    assert controller._irrigation_state == IrrigationState.MANUAL_SECTION
     controller.stop_device.assert_not_called()
 
 ## CHOSE SECTION TESTS
@@ -351,7 +351,7 @@ def test_chose_section_does_nothing_when_section_out_of_range():
     #Arrange 
     controller = GPIOController(PIN_CONFIG)
     controller._chosen_section = "section3"
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     #Act
 
     controller.choose_section(6)
@@ -363,7 +363,7 @@ def test_chose_section_changes_section_to_selected():
     #Arrange 
     controller = GPIOController(PIN_CONFIG)
     controller._chosen_section = "section3"
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     #Act
 
     controller.choose_section(2)
@@ -378,14 +378,14 @@ def test_run_pump_starts_when_irrigation_state_is_idle():
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     #Act
 
     controller.run_pump()
 
     #Assert
     controller.set_value.assert_called_once_with("pump",False)
-    assert controller._irrigation_state == controller.IrrigationState.MANUAL_PUMP
+    assert controller._irrigation_state == IrrigationState.MANUAL_PUMP
 
 def test_run_pump_stops_when_irrigation_state_is_manual_pump():   
     #Arrange 
@@ -393,14 +393,14 @@ def test_run_pump_stops_when_irrigation_state_is_manual_pump():
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.MANUAL_PUMP
+    controller._irrigation_state = IrrigationState.MANUAL_PUMP
     #Act
 
     controller.run_pump()
 
     #Assert
     controller.set_value.assert_called_once_with("pump",True)
-    assert controller._irrigation_state == controller.IrrigationState.IDLE
+    assert controller._irrigation_state == IrrigationState.IDLE
 
 def test_run_pump_does_not_interrupt_auto_irrigation():
     #Arrange 
@@ -408,14 +408,14 @@ def test_run_pump_does_not_interrupt_auto_irrigation():
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.IRRIGATING
+    controller._irrigation_state = IrrigationState.IRRIGATING
     #Act
 
     controller.run_pump()
 
     #Assert
     controller.set_value.assert_not_called()
-    assert controller._irrigation_state == controller.IrrigationState.IRRIGATING
+    assert controller._irrigation_state == IrrigationState.IRRIGATING
 
 ## CHECK IF SHOULD START IRRIGATION TESTS
 def test_check_if_should_start_irrigation_runs_when_device_is_idle_and_all_requirments_are_met():
@@ -426,7 +426,7 @@ def test_check_if_should_start_irrigation_runs_when_device_is_idle_and_all_requi
     controller._dashboard_updater = Mock()
     controller.start_irrigation_auto = Mock()
     controller._daily_schedule = Mock(sections=["section1", "section2", "section3"],start_time="12:00")
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
     controller._time_manager.current_hour_minute = "12:00"
     #Act
     controller.check_if_should_start_irrigation("it doesn't even matter")
@@ -445,7 +445,7 @@ def test_check_if_should_start_irrigation_does_nothing_when_device_is_not_in_idl
     controller.start_irrigation_auto = Mock()
     controller._daily_schedule = Mock(sections=["section1", "section2", "section3"],start_time="12:00")
     controller._time_manager.current_hour_minute = "12:00"
-    controller._irrigation_state = getattr(controller.IrrigationState,state)
+    controller._irrigation_state = getattr(IrrigationState,state)
 
 
     #Act
@@ -454,7 +454,7 @@ def test_check_if_should_start_irrigation_does_nothing_when_device_is_not_in_idl
 
     #Assert
     controller.start_irrigation_auto.assert_not_called()
-    assert controller._irrigation_state == getattr(controller.IrrigationState,state)
+    assert controller._irrigation_state == getattr(IrrigationState,state)
 
 def test_check_if_should_start_irrigation_does_nothing_when_current_time_is_different_than_start_time():
     #Arrange
@@ -465,7 +465,7 @@ def test_check_if_should_start_irrigation_does_nothing_when_current_time_is_diff
     controller.start_irrigation_auto = Mock()
     controller._daily_schedule = Mock(sections=["section1", "section2", "section3"],start_time="12:00")
     controller._time_manager.current_hour_minute = "13:00"
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
 
 
     #Act
@@ -474,7 +474,7 @@ def test_check_if_should_start_irrigation_does_nothing_when_current_time_is_diff
 
     #Assert
     controller.start_irrigation_auto.assert_not_called()
-    assert controller._irrigation_state == controller.IrrigationState.IDLE
+    assert controller._irrigation_state == IrrigationState.IDLE
 
 def test_check_if_should_start_irrigation_does_nothing_when_schedule_is_empty():
     #Arrange
@@ -485,14 +485,14 @@ def test_check_if_should_start_irrigation_does_nothing_when_schedule_is_empty():
     controller.start_irrigation_auto = Mock()
     controller._daily_schedule = Mock(sections=[],start_time="12:00")
     controller._time_manager.current_hour_minute = "12:00"
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
 
     #Act
     controller.check_if_should_start_irrigation("it doesn't even matter")
 
     #Assert
     controller.start_irrigation_auto.assert_not_called()
-    assert controller._irrigation_state == controller.IrrigationState.IDLE
+    assert controller._irrigation_state == IrrigationState.IDLE
 
 def test_check_if_should_start_irrigation_does_nothing_when_start_time_is_empty():
     #Arrange
@@ -503,14 +503,14 @@ def test_check_if_should_start_irrigation_does_nothing_when_start_time_is_empty(
     controller.start_irrigation_auto = Mock()
     controller._daily_schedule = Mock(sections=["section1", "section2", "section3"],start_time="")
     controller._time_manager.current_hour_minute = "12:00"
-    controller._irrigation_state = controller.IrrigationState.IDLE
+    controller._irrigation_state = IrrigationState.IDLE
 
     #Act
     controller.check_if_should_start_irrigation("it doesn't even matter")
 
     #Assert
     controller.start_irrigation_auto.assert_not_called()
-    assert controller._irrigation_state == controller.IrrigationState.IDLE
+    assert controller._irrigation_state == IrrigationState.IDLE
 
 ## SET DAILY SCHEDULE TESTS
 @pytest.mark.parametrize("day",["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"])
