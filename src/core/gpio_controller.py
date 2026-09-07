@@ -6,15 +6,16 @@ from ..protocols.scheduler_protocol import SchedulerProtocol
 from ..protocols.time_manager_protocol import TimeManagerProtocol
 from ..protocols.dashboard_updater_protocol import DashboardUpdaterProtocol
 import logging
+from enum import IntEnum
 logger = logging.getLogger(__name__)
 
 class GPIOController:
-    class IrrigationState:
+    class IrrigationState(IntEnum):
         IDLE = 0,
         IRRIGATING = 1,
         MANUAL_PUMP = 2,
         MANUAL_SECTION = 3,
-        ERROR = 4,
+        ERROR = 4, #Not much useful without hardware monitoring tools
     
     def __init__(self, pin_mapping: dict[str, int], chip = "/dev/gpiochip0", consumer="irrigation_controller"):
         self._daily_schedule:ScheduleEntry =  ScheduleEntry(start_time=None,sections=[])
@@ -113,16 +114,16 @@ class GPIOController:
         return value == Value.ACTIVE
     
     ## MANUAL
-    def run_pump(self, state: int): # Manual pump control, mqtt handler
+    def run_pump(self): # Manual pump control, mqtt handler
         if self._irrigation_state == self.IrrigationState.IRRIGATING:
             logger.info("Already running auto irrigation")
             return
         prev_state = self._irrigation_state
-        self._irrigation_state = self.IrrigationState.MANUAL_PUMP if state == 1 else self.IrrigationState.IDLE
+        self._irrigation_state = self.IrrigationState.MANUAL_PUMP if prev_state == self.IrrigationState.IDLE else self.IrrigationState.IDLE
         if prev_state != self._irrigation_state:
-            self.set_value("pump", not state)
-            logger.info(f"{'Started' if state == 1 else 'Stopped'} pump manually")
-            self._dashboard_updater.update_active_section("Pompa została uruchomiona ręcznie" if state == 1 else "Urządzenie jest bezczynne")
+            self.set_value("pump", not bool(self._irrigation_state)) #.IDLE is 0  
+            logger.info(f"{'Started' if self.IrrigationState.MANUAL_PUMP else 'Stopped'} pump manually")
+            self._dashboard_updater.update_active_section("Pompa została uruchomiona ręcznie" if self._irrigation_state == self.IrrigationState.MANUAL_PUMP else "Urządzenie jest bezczynne")
 
     def choose_section(self, section_number: int): # Manual section choosing, mqtt handler
         if section_number < 1 or section_number > 5: #Make it dynamic with some json config (just like irrigation plan)
@@ -156,7 +157,7 @@ class GPIOController:
     ## MANUAL END
     def stop_device(self):
         all_inactive = { #It is flipped because of relay module, setting pin to ACTIVE actually turns it off
-            pin: Value.ACTIVE for pin in self._pin_mapping.values() #TODO Rework after pin_config loading changes
+            pin: True for pin in self._pin_mapping.keys() #TODO Rework after pin_config loading changes
         }
         self.set_values(all_inactive)
         self._start_time = None

@@ -37,13 +37,13 @@ class PahoMqttAdapter:
         return msg_info.mid
 
     def set_on_connect(self, on_connect_callback):
-        self._client._on_connect_cb = on_connect_callback
+        self._on_connect_cb = on_connect_callback
 
     def set_on_message(self, on_message_callback):
-        self._client.on_message = on_message_callback
+        self._on_message_cb = on_message_callback
 
     def set_on_disconnect(self, on_disconnect_callback):
-        self._client.on_disconnect = on_disconnect_callback
+        self._on_disconnect_cb = on_disconnect_callback
 
     def set_on_publish(self, on_publish_callback):
         self._on_publish_cb = on_publish_callback

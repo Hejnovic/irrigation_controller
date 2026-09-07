@@ -61,7 +61,7 @@ def test_preload_config_calls_handlers(tmp_path):
     callback.assert_called_with(tmp_path/"json_file_1.json")
 
 ## WATCH TESTS
-@pytest.mark.parametrize("event,expected",[("modified","assert_called_once"),("added","assert_not_called"),("deleted","assert_not_called"),]) 
+@pytest.mark.parametrize("event,expected",[("modified","assert_called_once"),("added","assert_called_once"),("deleted","assert_not_called"),]) 
 #assert_not_called for event added because the file already exist - there is nothing in the _tracking_dict so program should not try to assign callback to already existing file that gave event .added 
 @pytest.mark.asyncio
 async def test_watch_on_event(tmp_path,event,expected):

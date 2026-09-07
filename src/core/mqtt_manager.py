@@ -18,7 +18,7 @@ class MQTTManager:
 
     def connect(self) -> None:
         self._client.connect(self._username,self._password,self._broker_address,self._broker_port,self._tls_enabled)
-        logger.info(f"Client connected at {self._broker_address}:{self._broker_port}")
+        logger.info(f"Client connected at {self._broker_address}:{self._broker_port}, using TSL:{self._tls_enabled}")
 
     def is_connected(self):
         return self._client.is_connected()

@@ -24,8 +24,8 @@ load_logging_config_yml(logger=logger)
 BLYNK_AUTH = os.environ["BLYNK_AUTH"]
 BROKER = os.environ["MQTT_BROKER"]
 PORT = int(os.environ["MQTT_PORT"])
-TLS_ENABLED = bool(int(os.environ["MQTT_TLS_ENABLED"]))
-ALL_TOPICS =  os.environ["MQTT_ALL_TOPICS"].split(",") # Comma-separated list of topics to subscribe to, e.g. "downlink/ds/startSection,downlink/ds/runPump"
+TLS_ENABLED = bool(os.environ["MQTT_TLS_ENABLED"])
+ALL_TOPICS =  os.environ["MQTT_ALL_TOPICS"] # Comma-separated list of topics to subscribe to, e.g. "downlink/ds/startSection,downlink/ds/runPump"
 DIR_PATH = Path(__file__).resolve().parent
 
 
@@ -69,11 +69,11 @@ def on_message(msg):
         payload = msg.payload.decode('utf-8')
         match topic:
             case "downlink/ds/runPump":
-                gpio_controller.run_pump(int(payload))
+                gpio_controller.run_pump()
             case "downlink/ds/choosingSection":
                 gpio_controller.choose_section(int(payload))
             case "downlink/ds/startSection":
-                gpio_controller.start_selected_section(int(payload))
+                gpio_controller.start_selected_section()
             case "downlink/ds/stopDevice":
                 if int(payload) == 1:
                     gpio_controller.stop_device()
@@ -114,7 +114,7 @@ async def main():
     watchdog.register_handler("irrigation_schedule.json", scheduler.load_schedule_from_json_file)
     watchdog.register_handler("irrigation_section_time.json", scheduler.load_irrigation_times_from_json_file)
     watchdog.register_handler("winter_months.json", scheduler.load_winter_months_from_json_file)
-    watchdog.register_handler("weather_adjustments.json",scheduler.load_weather_adjustment_from_json_file)
+    watchdog.register_handler("weather_adjustment.json",scheduler.load_weather_adjustment_from_json_file)
     watchdog.preload_configs()
     await asyncio.gather(
         day_loop(),

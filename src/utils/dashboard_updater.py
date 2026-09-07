@@ -17,6 +17,7 @@ class DashboardUpdater:
             return
         self._mqtt_manager = mqtt_manager
         logger.info("MQTT manager set for DashboardUpdater")
+        
     def set_time_manager(self, time_manager):
         if time_manager is None:
             logger.error("Cannot set None as time manager")
@@ -25,7 +26,7 @@ class DashboardUpdater:
             logger.error("Time manager already set for DashboardUpdater")
             return
         self._time_manager = time_manager
-        self._time_manager.set_callback_on_minute_change(self.update_datetime_dashboard)
+        self._time_manager.set_callback_on_minute_change(self.update_datetime)
         logger.info("Time manager set for DashboardUpdater")
 
     def update_datetime(self,_):

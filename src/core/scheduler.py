@@ -161,8 +161,8 @@ class Scheduler:
         if "adj_percentage" not in data.keys():
             logger.error("Provided data does not iclude adjustment percentage")
             return
-        if type(data["adj_percentage"]) is not int:
-            logger.error(f"Expected int and got value: {data["adj_percentage"]}")
+        if type(data["adj_percentage"]) not in  (int,float):
+            logger.error(f"Expected int or float and got value: {data["adj_percentage"]}")
             return
         self._adjustment = round(data["adj_percentage"]/100,2)
         logger.info(f"Adjustment loaded: {self._adjustment}")

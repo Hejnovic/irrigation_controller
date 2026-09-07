@@ -48,7 +48,7 @@ class Watchdog:
                         #When it is like this after removing file it is needed to restart program to track it again - there is no way yet to add callbacks from any GUI
                         logger.info(f"Removed handler for existing file: {file_path.name}")
                     continue
-                if change is Change.added: #Guarantees new file 
+                if change is Change.added: #Though it guarantees new file but atomic swap is registered as .added tmp.replace(file)
                     file_name = file_path.name
                     self._config_files[file_name] = file_path
                     #Check in tracking_dict if there is handler waiting for this file
@@ -56,12 +56,10 @@ class Watchdog:
                         self._handlers[file_path] = self._tracking_dict[file_name]
                         self._tracking_dict.pop(file_name)
                         logger.info(f"Added waiting callback to file: {file_name}")
-                    else:
-                        continue
                 #Code here handles .modified
                 handler = self._handlers.get(file_path)
                 if handler:
-                    logger.info(f"Detected change in {file_path}, invoking handler")
+                    logger.info(f"Detected change {str(change)} in {file_path}, invoking handler")
                     handler(file_path)
                 else:
                     logger.info(f"No handler registered for {file_path}")

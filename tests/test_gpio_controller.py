@@ -381,7 +381,7 @@ def test_run_pump_starts_when_irrigation_state_is_idle():
     controller._irrigation_state = controller.IrrigationState.IDLE
     #Act
 
-    controller.run_pump(1)
+    controller.run_pump()
 
     #Assert
     controller.set_value.assert_called_once_with("pump",False)
@@ -396,40 +396,10 @@ def test_run_pump_stops_when_irrigation_state_is_manual_pump():
     controller._irrigation_state = controller.IrrigationState.MANUAL_PUMP
     #Act
 
-    controller.run_pump(0)
+    controller.run_pump()
 
     #Assert
     controller.set_value.assert_called_once_with("pump",True)
-    assert controller._irrigation_state == controller.IrrigationState.IDLE
-
-def test_run_pump_does_nothing_when_irrigation_state_is_manual_pump_and_called_with_1():   
-    #Arrange 
-    controller = GPIOController(PIN_CONFIG)
-    controller._gpio.reset_mock()
-    controller._dashboard_updater = Mock()
-    controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.MANUAL_PUMP
-    #Act
-
-    controller.run_pump(1)
-
-    #Assert
-    controller.set_value.assert_not_called()
-    assert controller._irrigation_state == controller.IrrigationState.MANUAL_PUMP
-
-def test_run_pump_does_nothing_when_irrigation_state_is_idle_and_called_with_0():   
-    #Arrange 
-    controller = GPIOController(PIN_CONFIG)
-    controller._gpio.reset_mock()
-    controller._dashboard_updater = Mock()
-    controller.set_value = Mock()
-    controller._irrigation_state = controller.IrrigationState.IDLE
-    #Act
-
-    controller.run_pump(0)
-
-    #Assert
-    controller.set_value.assert_not_called()
     assert controller._irrigation_state == controller.IrrigationState.IDLE
 
 def test_run_pump_does_not_interrupt_auto_irrigation():
@@ -441,7 +411,7 @@ def test_run_pump_does_not_interrupt_auto_irrigation():
     controller._irrigation_state = controller.IrrigationState.IRRIGATING
     #Act
 
-    controller.run_pump(0)
+    controller.run_pump()
 
     #Assert
     controller.set_value.assert_not_called()
