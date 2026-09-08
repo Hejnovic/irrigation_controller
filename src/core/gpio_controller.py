@@ -119,7 +119,7 @@ class GPIOController:
         if prev_state != self._irrigation_state:
             self.set_value("pump", not bool(self._irrigation_state)) #.IDLE is 0  
             logger.info(f"{'Started' if IrrigationState.MANUAL_PUMP else 'Stopped'} pump manually")
-            self._dashboard_updater.update_active_section("Pompa została uruchomiona ręcznie" if self._irrigation_state == IrrigationState.MANUAL_PUMP else "Urządzenie jest bezczynne")
+            self._dashboard_updater.update_active_section(self._irrigation_state)
 
     def choose_section(self, section_number: int): # Manual section choosing, mqtt handler
         if section_number < 1 or section_number > 5: #Make it dynamic with some json config (just like irrigation plan)
@@ -136,7 +136,7 @@ class GPIOController:
             self.set_value(self._chosen_section, False)
             self.set_value("pump", False)
             logger.info(f"Started irrigation for {self._chosen_section}")
-            self._dashboard_updater.update_active_section(f"Ręcznie uruchomiono sekcję {self._chosen_section[-1]}")
+            self._dashboard_updater.update_active_section(self._irrigation_state,section=self._chosen_section)
         elif self._irrigation_state == IrrigationState.MANUAL_SECTION: 
             self.stop_device()
 
@@ -159,9 +159,8 @@ class GPIOController:
         self._start_time = None
         self._time_end = None
         logger.info("Stopped irrigation and set all pins to INACTIVE")
-        self._dashboard_updater.update_active_section("Urządzenie jest bezczynne")
-        self._dashboard_updater.update_time_interval("") #Just makes it empty on frontend
         self._irrigation_state = IrrigationState.IDLE
+        self._dashboard_updater.update_active_section(self._irrigation_state)
         for callback in self._callback_on_stop_device:
                 try:
                     callback()
@@ -177,8 +176,7 @@ class GPIOController:
             if self._time_end is None:
                 irrigation_time = self._scheduler.get_irrigation_time(self._current_section)
                 self._time_end = self._time_manager.add_minutes(self._start_time,irrigation_time)
-            self._dashboard_updater.update_active_section(f"Podlewanie sekcji {self._current_section[-1]}")
-            self._dashboard_updater.update_time_interval(f"Zmiana sekcji o godzinie {self._time_end} - interwał: {irrigation_time} min") 
+            self._dashboard_updater.update_active_section(self._irrigation_state,section=self._current_section,time_end=self._time_end,time_interval=irrigation_time)
         else:
             self.stop_device()
             logger.info("Irrigation sequence completed for all sections")

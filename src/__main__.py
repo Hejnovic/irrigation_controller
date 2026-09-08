@@ -57,6 +57,7 @@ def on_connect(rc):
         logger.info(f"Subscribed to topic: {ALL_TOPICS}")
         mqtt_manager.publish("ds/activeSection", "Urządzenie jest bezczynne")
         mqtt_manager.publish("ds/choosingSection", 1, qos=1, retain=True) 
+        mqtt_manager.publish("ds/currentSchedule","")
         mqtt_manager.publish("ds/timeInterval", "",qos=1)
         mqtt_manager.publish("ds/runPump", 0,qos=2)
         mqtt_manager.publish("ds/startSection", 0,qos=2)

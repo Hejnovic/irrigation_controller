@@ -1,12 +1,14 @@
 import logging
 from .enums import IrrigationState
 from ..protocols.time_manager_protocol import TimeManagerProtocol
+from ..protocols.mqtt_manager_protocol import MqttManagerProtocol
+from ..utils.schedule_entry import ScheduleEntry
 logger = logging.getLogger(__name__)
 
 class DashboardUpdater:
 
     def __init__(self):
-        self._mqtt_manager = None
+        self._mqtt_manager:MqttManagerProtocol | None = None
         self._time_manager: TimeManagerProtocol | None  = None 
  
     def set_mqtt_manager(self, mqtt_manager):
@@ -31,46 +33,69 @@ class DashboardUpdater:
         logger.info("Time manager set for DashboardUpdater")
 
     def update_datetime(self,_):
-        if self._mqtt_manager is None:
-            logger.error("MQTT manager not set for DashboardUpdater")
-            return
-        if self._time_manager is None:
-            logger.error("Time manager not set for DashboardUpdater")
-            return
-        if not self._mqtt_manager.is_connected():
-            logger.warning("Cannot update dashboard: MQTT broker is not reachable")
-            return
         timestamp = self._time_manager.current_datetime
-        self._mqtt_manager.publish("ds/deviceTime", f"{timestamp} - {self._time_manager.current_day_of_week}")
+        weekday = self._time_manager.current_day_of_week
+        self._mqtt_manager.publish("ds/deviceTime", f"{timestamp} - {weekday}",retain=True)
         logger.debug("Dashboard updated")
-    ##TODO Rework so it just recieves state of the controller and then knows what to put on dashboard state, **kwargs 
-    def update_active_section(self, section_name):
-        if self._mqtt_manager is None:
-            logger.error("MQTT manager not set for DashboardUpdater")
-            return
-        if not self._mqtt_manager.is_connected():
-            logger.warning("Cannot update dashboard: MQTT broker is not reachable")
-            return
-        self._mqtt_manager.publish("ds/activeSection", section_name)
-        logger.debug(f"Dashboard updated with active section: {section_name}")
 
-    def update_time_interval(self, time_interval):
-        if self._mqtt_manager is None:
-            logger.error("MQTT manager not set for DashboardUpdater")
-            return
-        if not self._mqtt_manager.is_connected():
-            logger.warning("Cannot update dashboard: MQTT broker is not reachable")
-            return
-        self._mqtt_manager.publish("ds/timeInterval", time_interval)
-        logger.debug(f"Dashboard updated with time interval: {time_interval}")
+  
+    def update_active_section(self, state:IrrigationState,**kwargs):
+    #     class IrrigationState(IntEnum):
+    #     IDLE = 0
+    #     IRRIGATING = 1
+    #     MANUAL_PUMP = 2
+    #     MANUAL_SECTION = 3
+    #     ERROR = 4 
+    ## 5 states that have to consider
+        match state:
+            case IrrigationState.IDLE:   
+                self._mqtt_manager.publish("ds/activeSection","Urzadzenie jest bezczynne",retain=True)
+                
+            case IrrigationState.IRRIGATING:
+                section = kwargs.get("section",None)
+                time_interval = kwargs.get("time_interval", None)
+                time_end = kwargs.get("time_end",None)
+                self._mqtt_manager.publish("ds/activeSection",f"Podlewanie sekcji nr {section[-1]}",retain=True)
+                self.update_time_interval(time_end=time_end,time_interval=time_interval)
+
+            case IrrigationState.MANUAL_PUMP:
+                self._mqtt_manager.publish("ds/activeSection","Uruchomiono pompę w trybie manualnym",retain=True)
+
+            case IrrigationState.MANUAL_SECTION:
+                section = kwargs.get("section",None)
+                self._mqtt_manager.publish("ds/activeSection",f"Uruchomiono ręcznie sekcję nr {section[-1]}",retain=True)
+
+            case IrrigationState.ERROR:
+                error = kwargs.get("error",None)
+                self._mqtt_manager.publish("ds/activeSection","Error has occured, check logs for more info",retain=True)
+                logger.error(f"Error occured: {error}")
+
+        logger.debug(f"Dashboard updated")
+
+    def update_time_interval(self, **kwargs) -> None:
+        time_end = kwargs.get("time_end",None)
+        time_interval = kwargs.get("time_interval",None)
+        if not time_interval or not time_end:
+            self._mqtt_manager.publish("ds/timeInterval","",retain=True)
+        else:
+            self._mqtt_manager.publish("ds/timeInterval", f"Zmiana sekcji o godzinie {time_end} - interwał: {time_interval} min",retain=True)
+        logger.debug(f"Dashboard updated")
+
+    def update_schedule(self,schedule:ScheduleEntry) -> None:
+        start_time = schedule.start_time
+        sections = schedule.sections
+        #sections are either ["all"], [] or ["section1","section2"] or None
+        #start time is string HH:MM example: 05:25
+        section_numbers = sorted([section[-1] for section in sections])
+        if section_numbers == ["l"]:
+            section_numbers = ["1","2","3","4","5"]
+        if start_time:
+            self._mqtt_manager.publish("ds/currentSchedule",f"Start: {start_time}, sekcje: {(",".join(section_numbers))}",retain=True)
+        else:
+            self._mqtt_manager.publish("ds/currentSchedule",f"Dzień bez podlewania",retain=True)
         
+
     def reset_dashboard_buttons(self):
-        if self._mqtt_manager is None:
-            logger.error("MQTT manager not set for DashboardUpdater")
-            return
-        if not self._mqtt_manager.is_connected():
-            logger.warning("Cannot update dashboard: MQTT broker is not reachable")
-            return
         self._mqtt_manager.publish("ds/startSection", 0)
         self._mqtt_manager.publish("ds/runPump", 0)
         logger.info("Dashboard buttons reset")

@@ -20,8 +20,10 @@ class PahoMqttAdapter:
     def connect(self,username,password,broker_adress,broker_port,tls_enabled):
         if(username and password):
             self._client.username_pw_set(username=username,password=password)
+            logger.info("MQTT configured with username and password")
         if(tls_enabled):
             self._client.tls_set()
+            logger.info("MQTT configured with TSL enabled")
         self._client.connect(host=broker_adress,port=broker_port)
         self._client.loop_start()
 
