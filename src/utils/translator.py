@@ -12,7 +12,7 @@ class Translator:
 
         for path in Path(translation_dir).rglob("*.json"):
             with open(path) as f:
-                data = load_json_file(f)
+                data = load_json_file(path)
                 #Type checking
                 if not isinstance(data,dict):
                     return
