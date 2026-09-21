@@ -24,19 +24,24 @@ def test_update_ative_section_idle_state():
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
     state = IrrigationState.IDLE
 
     #Act
     dashboard_updater.update_active_section(state)
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/activeSection","Urzadzenie jest bezczynne",retain=True)
+    dashboard_updater._translator.translate.assert_called_once_with("device_idle")
+    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/activeSection","XXX",retain=True)
 
 def test_update_ative_section_irrigating_state():
     #Arrange
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
     dashboard_updater.update_time_interval = Mock()
     state = IrrigationState.IRRIGATING
 
@@ -44,47 +49,57 @@ def test_update_ative_section_irrigating_state():
     dashboard_updater.update_active_section(state,section="section1",time_interval=15,time_end="15:50",)
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/activeSection",f"Podlewanie sekcji nr 1",retain=True)
-    dashboard_updater.update_time_interval.assert_called_with(time_end="15:50",time_interval=15)
+    dashboard_updater._mqtt_manager.publish.assert_called_once_with("ds/activeSection","XXX",retain=True)
+    dashboard_updater._translator.translate.assert_called_once_with("section_running_auto",section="1")
+    dashboard_updater.update_time_interval.assert_called_once_with(time_interval=15,time_end="15:50")
 
 def test_update_ative_section_manual_pump_state():
     #Arrange
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
     state = IrrigationState.MANUAL_PUMP
 
     #Act
     dashboard_updater.update_active_section(state)
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/activeSection","Uruchomiono pompę w trybie manualnym",retain=True)
+    dashboard_updater._translator.translate.assert_called_once_with("pump_running_manual")
+    dashboard_updater._mqtt_manager.publish.assert_called_once_with("ds/activeSection","XXX",retain=True)
 
 def test_update_ative_section_manual_section_state():
     #Arrange
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
     state = IrrigationState.MANUAL_SECTION
 
     #Act
     dashboard_updater.update_active_section(state,section="section1")
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/activeSection","Uruchomiono ręcznie sekcję nr 1",retain=True)
+    dashboard_updater._translator.translate.assert_called_once_with("section_running_manual",section="1")
+    dashboard_updater._mqtt_manager.publish.assert_called_once_with("ds/activeSection","XXX",retain=True)
 
 def test_update_ative_section_error_state():
     #Arrange
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
     state = IrrigationState.ERROR
 
     #Act
     dashboard_updater.update_active_section(state,section="section1")
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/activeSection","Error has occured, check logs for more info",retain=True)
+    dashboard_updater._translator.translate.assert_called_once_with("error")
+    dashboard_updater._mqtt_manager.publish.assert_called_once_with("ds/activeSection","XXX",retain=True)
 
 ## UPDATE TIME INTERVAL TESTS
 def test_update_time_interval_calls_publish_with_data():
@@ -92,23 +107,29 @@ def test_update_time_interval_calls_publish_with_data():
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
 
     #Act
     dashboard_updater.update_time_interval(time_end="16:30",time_interval=50)
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/timeInterval","Zmiana sekcji o godzinie 16:30 - interwał: 50 min",retain=True)
+    dashboard_updater._translator.translate.assert_called_once_with("time_interval_auto",time_end="16:30",time_interval=50)
+    dashboard_updater._mqtt_manager.publish.assert_called_once_with("ds/timeInterval","XXX",retain=True)
 
 def test_update_time_interval_calls_publish_with_data():
     #Arrange
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
 
     #Act
     dashboard_updater.update_time_interval(time_interval="16:20")
 
     #Assert
+    dashboard_updater._translator.translate.assert_not_called()
     dashboard_updater._mqtt_manager.publish.assert_called_with("ds/timeInterval","",retain=True)
 
 ## UPDATE SCHEDULE TESTS
@@ -117,36 +138,42 @@ def test_update_schedule_with_sections_all():
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
 
     #Act
     dashboard_updater.update_schedule(ScheduleEntry(start_time="04:00",sections=["all"]))
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/currentSchedule",f"Start: 04:00, sekcje: 1,2,3,4,5",retain=True)
+    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/currentSchedule","XXX",retain=True)
 
 def test_update_schedule_with_sections_empty():
     #Arrange
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
 
     #Act
     dashboard_updater.update_schedule(ScheduleEntry(start_time=None,sections=[]))
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/currentSchedule",f"Dzień bez podlewania",retain=True)
+    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/currentSchedule","XXX",retain=True)
 
 def test_update_schedule_with_specified_sections():
     #Arrange
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
 
     #Act
     dashboard_updater.update_schedule(ScheduleEntry(start_time="04:00",sections=["section2","section1","section5"]))
 
     #Assert
-    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/currentSchedule",f"Start: 04:00, sekcje: 1,2,5",retain=True)
+    dashboard_updater._mqtt_manager.publish.assert_called_with("ds/currentSchedule","XXX",retain=True)
 
 ## RESET DASHBOARD BUTTONS TESTS
 def test_reset_dashboard_buttons_calls_publish():
@@ -154,6 +181,8 @@ def test_reset_dashboard_buttons_calls_publish():
     dashboard_updater = DashboardUpdater()
     dashboard_updater._mqtt_manager = Mock()
     dashboard_updater._time_manager = Mock()
+    dashboard_updater._translator = Mock()
+    dashboard_updater._translator.translate.return_value = "XXX"
 
     #Act
     dashboard_updater.reset_dashboard_buttons()

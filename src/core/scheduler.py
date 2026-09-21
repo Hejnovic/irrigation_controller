@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from collections.abc import Callable
 from ..protocols.time_manager_protocol import TimeManagerProtocol
+from ..utils.json_loader import load_json_file
 logger = logging.getLogger(__name__)
 
     
@@ -57,24 +58,11 @@ class Scheduler:
     def load_schedule_from_json_file(self, json_file_path: Path):
         #Example: {"Monday":{"start_time":"04:00","sections":["all"]}, "Wednesday": ... }
         logger.info(f"Loading irrigation schedule from {json_file_path}")
-        if not json_file_path.is_file():
-            logger.warning(f"Irrigation schedule config file not found at {json_file_path}. Using default irrigation times.")
-            return
-        with open(json_file_path, 'r') as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError as e:
-                logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
-                return
+        data = load_json_file(json_file_path)
         #Type checking
         if not isinstance(data,dict):
             logger.error(f"Provided data is not a dict")
-            for day, entry in data.items():
-                if not isinstance(entry,dict):
-                    logger.error(f"The entry {entry} is not dict")
-                    return
-            return
-        # Can probably avoid looping twice on the same dict
+            return  
         for day, entry in data.items(): # Don't need to clear existing cuz schedule is expected always defined for all days, defining only few days will leave other entries unaffected
             #Validate if entry has needed keys for setting up schedule
             entry_keys = entry.keys()
@@ -85,7 +73,7 @@ class Scheduler:
         ## pass schedule to gpio controller as well
         for callback in self._callbacks_on_schedule_change:
             try:
-                callback(self._time_manager.current_day_of_week)  # I think it needs to be done better 
+                callback(self._time_manager.current_day_of_week)
             except Exception as e:
                 logger.error(f"Error in schedule change callback: {e}")
         logger.info(f"Schedule loaded from {json_file_path}")
@@ -93,15 +81,7 @@ class Scheduler:
     def load_irrigation_times_from_json_file(self, json_file_path: Path):
         #Example: {"section1": 15 , "section3": 25}
         logger.info(f"Loading irrigation times from {json_file_path}")
-        if not json_file_path.is_file():
-            logger.warning(f"Irrigation times config file not found at {json_file_path}. Using default irrigation times.")
-            return
-        with open(json_file_path, 'r') as f:
-            try:
-                data = json.load(f) 
-            except json.JSONDecodeError as e:
-                logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
-                return
+        data = load_json_file(json_file_path)
         #Type checking 
         if not isinstance(data,dict):
             logger.error("Provided data is not a dict")
@@ -121,15 +101,7 @@ class Scheduler:
     def load_winter_months_from_json_file(self, json_file_path: Path):
         #Example: ["October","November", "December", "January", "February", "March", "April"]
         logger.info(f"Loading winter months from {json_file_path}")
-        if not json_file_path.is_file():
-            logger.warning(f"Winter months config file not found at {json_file_path}. Using default winter months.")
-            return
-        with open(json_file_path, 'r') as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError as e:
-                logger.error(f"Provided file is not parsable JSON with {e.msg}, {e.doc}")
-                return
+        data = load_json_file(json_file_path)
         #Type checking 
         if type(data) is not list:
             logger.error(f"Provided data is not a list")
@@ -145,15 +117,7 @@ class Scheduler:
         #Example: {"adj_percentage": 25, "total_pop": 0.5, "days_analyzed": 5, "avg_max_temps": 26.43, "max_temp": 28.95}
         #This is run by cron job - when error is occured maybe just rerun cron job?
         logger.info(f"Loading weather adjustments from {json_file_path}")
-        if not json_file_path.is_file():
-            logger.warning(f"Weather adjustment config file at {json_file_path} not found. Not taking adjustments to irrigation times")
-            return
-        with open(json_file_path, 'r') as f:
-            try:
-                data = json.load(f) 
-            except json.JSONDecodeError as e:
-                logger.error(f"Provided file is not parsable JSON with {e.msg}, line: {e.lineno}, column: {e.colno}")
-                return
+        data = load_json_file(json_file_path)
         #Type checking
         if not isinstance(data,dict):
             logger.error(f"Provided data is not a dict")

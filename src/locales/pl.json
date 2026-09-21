@@ -1,0 +1,10 @@
+{
+  "device_idle": "Urządzenie jest bezczynne",
+  "pump_running_manual": "Uruchomiono pompę w trybie manualnym",
+  "section_running_manual": "Uruchomiono ręcznie sekcję nr {section}",
+  "section_running_auto": "Podlawenie sekcji nr {section}",
+  "error": "Wystąpił błąd podczas podlewania - po więcej informacji sprawdź logi",
+  "time_interval_auto": "Zmiana sekcji o godzinie {time_end} - interwał: {time_interval} min",
+  "daily_schedule": "Start: {start_time}, sekcje: {sections}",
+  "daily_schedule_empty": "Dzień bez podlewania"
+}

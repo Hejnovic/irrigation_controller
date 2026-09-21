@@ -7,6 +7,7 @@ from .core.scheduler import Scheduler
 from .utils.watchdog import Watchdog
 from .utils.load_logger_config_yml import load_logging_config_yml
 from .adapters.paho_mqtt_adapter import PahoMqttAdapter
+from .utils.translator import Translator
 import os
 from pathlib import Path
 
@@ -26,6 +27,7 @@ BROKER = os.environ["MQTT_BROKER"]
 PORT = int(os.environ["MQTT_PORT"])
 TLS_ENABLED = bool(os.environ["MQTT_TLS_ENABLED"])
 ALL_TOPICS =  os.environ["MQTT_ALL_TOPICS"] # Comma-separated list of topics to subscribe to, e.g. "downlink/ds/startSection,downlink/ds/runPump"
+LOCALE = os.environ["LOCALE"]
 DIR_PATH = Path(__file__).resolve().parent
 
 
@@ -47,7 +49,8 @@ mqtt_manager = MQTTManager(client,BROKER, PORT, username="device", password=BLYN
 time_manager = TimeManager()
 dashboard_updater = DashboardUpdater()
 watchdog = Watchdog((DIR_PATH/"configs").resolve())
-
+translator = Translator((DIR_PATH/"locales").resolve())
+translator.set_locale(LOCALE)
 
 def on_connect(rc):
     if rc == 0:
@@ -106,6 +109,7 @@ async def main():
     cleanup_manager.register(gpio_controller.cleanup)
     dashboard_updater.set_mqtt_manager(mqtt_manager)
     dashboard_updater.set_time_manager(time_manager)
+    dashboard_updater.set_translator(translator)
     scheduler.set_time_manager(time_manager)
     scheduler.set_callback_on_schedule_change(gpio_controller.set_daily_schedule)
     gpio_controller.set_time_manager(time_manager)

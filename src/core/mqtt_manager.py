@@ -5,7 +5,7 @@ from collections.abc import Callable
 logger = logging.getLogger(__name__) 
 
 class MQTTManager:
-    def __init__(self, client: MqttClientProtocol,broker_address:str, broker_port:int,username: str, password: str,tls_enabled: bool = False):
+    def __init__(self, client: MqttClientProtocol, broker_address:str, broker_port:int,username: str, password: str, tls_enabled: bool = False):
         self._broker_address = broker_address
         self._broker_port = broker_port
         self._username = username

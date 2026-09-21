@@ -22,3 +22,6 @@ class DashboardUpdaterProtocol(Protocol):
 
     def reset_dashboard_buttons(self) -> None:
         ...
+
+    def load_locales(self,locales) -> None:
+        ...

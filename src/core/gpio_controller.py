@@ -137,7 +137,7 @@ class GPIOController:
             self.set_value("pump", False)
             logger.info(f"Started irrigation for {self._chosen_section}")
             self._dashboard_updater.update_active_section(self._irrigation_state,section=self._chosen_section)
-        elif self._irrigation_state == IrrigationState.MANUAL_SECTION: 
+        elif self._irrigation_state == IrrigationState.MANUAL_SECTION:
             self.stop_device()
 
     def start_manual_irrigation(self):

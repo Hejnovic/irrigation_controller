@@ -1,0 +1,10 @@
+{
+  "device_idle": "Device is idle",
+  "pump_running_manual": "Pump is running in manual mode",
+  "section_running_manual": "Manually running section number {section}",
+  "section_running_auto": "Irrigating section {section}",
+  "error": "Error has occured - for more infomration check logs",
+  "time_interval_auto": "Change of section at {time_end} - interval: {time_interval} min",
+  "daily_schedule": "Start: {start_time}, sections: {sections}",
+  "daily_schedule_empty": "Day without irrigation"
+}
