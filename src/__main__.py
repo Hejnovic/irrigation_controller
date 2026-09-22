@@ -11,7 +11,7 @@ from .utils.translator import Translator
 from .utils.enums import MQTTTopics
 import os
 from pathlib import Path
-import json
+
 
 
 
@@ -39,8 +39,20 @@ PIN_CONFIG = { #Make it dynamic from config file TODO TOTAL REWORK
     "section4": 25,
     "section5": 27
 }
+"""NEW PIN CONFIG 
+PIN_CONFIG={
+    "inputs":{
+    "input1":pin1,arg1,arg2 # During building use .get(key,default) method to supply all fields required by gpiod
+    }
+    "outputs":{
+    "output1":pin2,arg1
+    "output2":pin3
+    }
+}
 
 
+
+ """
 cleanup_manager = CleanupManager()
 gpio_controller = GPIOController(PIN_CONFIG)
 scheduler = Scheduler()
@@ -68,6 +80,7 @@ def on_connect(rc):
 
 def on_message(msg):
     topic = msg.topic
+    payload = None
     try: 
         payload = msg.payload.decode('utf-8')
         match topic:
@@ -83,9 +96,15 @@ def on_message(msg):
             case MQTTTopics.START_IRRIGATION.downlink:
                 if int(payload) == 1:
                     gpio_controller.start_manual_irrigation()
+            case _:
+                logger.warning("Unknown topic")
+                pass
+        logger.info(f"Received message on topic {topic}: {payload}")
+    except ValueError as e:
+        logger.error(f"Wrong format of payload for topic {topic}: {payload!r} ({e})")
     except Exception as e:
-        logger.error(f"Error processing message on topic {topic}: {e}")
-    logger.info(f"Received message on topic {topic}: {payload}")
+        logger.exception(f"Error processing message on topic {topic}: ({e})")
+        
 
 def on_disconnect(rc):
     #reconnect is handled by reconnect_delay_set
