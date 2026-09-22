@@ -8,12 +8,13 @@ from .utils.watchdog import Watchdog
 from .utils.load_logger_config_yml import load_logging_config_yml
 from .adapters.paho_mqtt_adapter import PahoMqttAdapter
 from .utils.translator import Translator
+from .utils.enums import MQTTTopics
 import os
 from pathlib import Path
+import json
 
 
 
-import time
 import logging
 import asyncio
 
@@ -26,7 +27,6 @@ BLYNK_AUTH = os.environ["BLYNK_AUTH"]
 BROKER = os.environ["MQTT_BROKER"]
 PORT = int(os.environ["MQTT_PORT"])
 TLS_ENABLED = bool(os.environ["MQTT_TLS_ENABLED"])
-ALL_TOPICS =  os.environ["MQTT_ALL_TOPICS"] # Comma-separated list of topics to subscribe to, e.g. "downlink/ds/startSection,downlink/ds/runPump"
 LOCALE = os.environ["LOCALE"]
 DIR_PATH = Path(__file__).resolve().parent
 
@@ -56,14 +56,13 @@ def on_connect(rc):
     if rc == 0:
         logger.info(f"Connected to MQTT broker at {BROKER}:{PORT} with TLS={TLS_ENABLED}")
         # Subscribe to control pin(s)
-        mqtt_manager.subscribe(ALL_TOPICS)
-        logger.info(f"Subscribed to topic: {ALL_TOPICS}")
-        mqtt_manager.publish("ds/activeSection", "Urządzenie jest bezczynne")
-        mqtt_manager.publish("ds/choosingSection", 1, qos=1, retain=True) 
-        mqtt_manager.publish("ds/currentSchedule","")
-        mqtt_manager.publish("ds/timeInterval", "",qos=1)
-        mqtt_manager.publish("ds/runPump", 0,qos=2)
-        mqtt_manager.publish("ds/startSection", 0,qos=2)
+        mqtt_manager.subscribe(MQTTTopics.get_topics_list())
+        mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,MQTTTopics.ACTIVE_SECTION.qos, translator.translate("device_idle"))
+        mqtt_manager.publish(MQTTTopics.CHOOSE_SECTION.topic, 1, qos=MQTTTopics.CHOOSE_SECTION.qos, retain=True) 
+        mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,"",qos=MQTTTopics.CHOOSE_SECTION.qos)
+        mqtt_manager.publish(MQTTTopics.TIME_INTERVAL.topic, "",qos=MQTTTopics.TIME_INTERVAL.qos)
+        mqtt_manager.publish(MQTTTopics.RUN_PUMP.topic, 0,qos=MQTTTopics.RUN_PUMP.qos) # This resets UI button
+        mqtt_manager.publish(MQTTTopics.START_SECTION.topic, 0,qos=MQTTTopics.START_SECTION.qos) # This resets UI button
     else:
         logger.warning(f"Connection failed with code {rc}")
 
@@ -72,16 +71,16 @@ def on_message(msg):
     try: 
         payload = msg.payload.decode('utf-8')
         match topic:
-            case "downlink/ds/runPump":
+            case MQTTTopics.RUN_PUMP.downlink:
                 gpio_controller.run_pump()
-            case "downlink/ds/choosingSection":
+            case MQTTTopics.CHOOSE_SECTION.downlink:
                 gpio_controller.choose_section(int(payload))
-            case "downlink/ds/startSection":
+            case MQTTTopics.START_SECTION.downlink:
                 gpio_controller.start_selected_section()
-            case "downlink/ds/stopDevice":
+            case MQTTTopics.STOP_DEVICE.downlink:
                 if int(payload) == 1:
                     gpio_controller.stop_device()
-            case "downlink/ds/startIrigation":
+            case MQTTTopics.START_IRRIGATION.downlink:
                 if int(payload) == 1:
                     gpio_controller.start_manual_irrigation()
     except Exception as e:
@@ -102,11 +101,11 @@ async def day_loop():
         await asyncio.sleep(1)  # Run every second - though it creates overhead - more precise would be tracking time at enter and then subcract whatever value of the time is in the end of the day_loop and then use asyncio.sleep(max(0, 1 - time_elapsed)) 
 
 async def main():
+    cleanup_manager.register(gpio_controller.cleanup)
     mqtt_manager.set_on_connect(on_connect)
     mqtt_manager.set_on_message(on_message)
     mqtt_manager.set_on_disconnect(on_disconnect)
     mqtt_manager.connect()
-    cleanup_manager.register(gpio_controller.cleanup)
     dashboard_updater.set_mqtt_manager(mqtt_manager)
     dashboard_updater.set_time_manager(time_manager)
     dashboard_updater.set_translator(translator)

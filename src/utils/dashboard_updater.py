@@ -1,5 +1,5 @@
 import logging
-from .enums import IrrigationState
+from .enums import IrrigationState, MQTTTopics
 from ..protocols.time_manager_protocol import TimeManagerProtocol
 from ..protocols.mqtt_manager_protocol import MqttManagerProtocol
 from ..protocols.translator_protocol import TranslatorProtocol
@@ -46,7 +46,7 @@ class DashboardUpdater:
     def update_datetime(self,_):
         timestamp = self._time_manager.current_datetime
         weekday = self._time_manager.current_day_of_week
-        self._mqtt_manager.publish("ds/deviceTime", f"{timestamp} - {weekday}",retain=True)
+        self._mqtt_manager.publish(MQTTTopics.DEVICE_TIME.topic, f"{timestamp} - {weekday}",qos=MQTTTopics.DEVICE_TIME.qos,retain=True)
         logger.debug("Dashboard updated")
 
   
@@ -61,27 +61,27 @@ class DashboardUpdater:
         match state:
             case IrrigationState.IDLE:   
                 # self._mqtt_manager.publish("ds/activeSection","Urzadzenie jest bezczynne",retain=True)
-                self._mqtt_manager.publish("ds/activeSection",self._translator.translate("device_idle"),retain=True)
+                self._mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,self._translator.translate("device_idle"),qos=MQTTTopics.ACTIVE_SECTION.qos,retain=True)
                                           
             case IrrigationState.IRRIGATING:
                 section = kwargs.get("section",None)
                 time_interval = kwargs.get("time_interval", None)
                 time_end = kwargs.get("time_end",None)
                 # self._mqtt_manager.publish("ds/activeSection",f"Podlewanie sekcji nr {section[-1]}",retain=True)
-                self._mqtt_manager.publish("ds/activeSection",self._translator.translate("section_running_auto",section=section[-1]),retain=True)
+                self._mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,self._translator.translate("section_running_auto",section=section[-1]),qos=MQTTTopics.ACTIVE_SECTION.qos,retain=True)
                 self.update_time_interval(time_end=time_end,time_interval=time_interval)
 
             case IrrigationState.MANUAL_PUMP:
                 # self._mqtt_manager.publish("ds/activeSection","Uruchomiono pompę w trybie manualnym",retain=True)
-                self._mqtt_manager.publish("ds/activeSection",self._translator.translate("pump_running_manual"),retain=True)
+                self._mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,self._translator.translate("pump_running_manual"),qos=MQTTTopics.ACTIVE_SECTION.qos,retain=True)
 
             case IrrigationState.MANUAL_SECTION:
                 section = kwargs.get("section",None)
                 # self._mqtt_manager.publish("ds/activeSection",f"Uruchomiono ręcznie sekcję nr {section[-1]}",retain=True)
-                self._mqtt_manager.publish("ds/activeSection",self._translator.translate("section_running_manual",section=section[-1]),retain=True)
+                self._mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,self._translator.translate("section_running_manual",section=section[-1]),qos=MQTTTopics.ACTIVE_SECTION.qos,retain=True)
             case IrrigationState.ERROR:
                 error = kwargs.get("error",None)
-                self._mqtt_manager.publish("ds/activeSection",self._translator.translate("error"),retain=True)
+                self._mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,self._translator.translate("error"),qos=MQTTTopics.ACTIVE_SECTION.qos,retain=True)
                 logger.error(f"Error occured: {error}")
 
         logger.debug(f"Dashboard updated")
@@ -90,10 +90,10 @@ class DashboardUpdater:
         time_end = kwargs.get("time_end",None)
         time_interval = kwargs.get("time_interval",None)
         if not time_interval or not time_end:
-            self._mqtt_manager.publish("ds/timeInterval","",retain=True)
+            self._mqtt_manager.publish(MQTTTopics.TIME_INTERVAL.topic,"",qos=MQTTTopics.TIME_INTERVAL.qos,retain=True)
         else:
             # self._mqtt_manager.publish("ds/timeInterval", f"Zmiana sekcji o godzinie {time_end} - interwał: {time_interval} min",retain=True)
-            self._mqtt_manager.publish("ds/timeInterval",self._translator.translate("time_interval_auto",time_end=time_end,time_interval=time_interval),retain=True)
+            self._mqtt_manager.publish(MQTTTopics.TIME_INTERVAL.topic,self._translator.translate("time_interval_auto",time_end=time_end,time_interval=time_interval),qos=MQTTTopics.TIME_INTERVAL.qos,retain=True)
         logger.debug(f"Dashboard updated")
 
     def update_schedule(self,schedule:ScheduleEntry) -> None:
@@ -106,15 +106,15 @@ class DashboardUpdater:
             section_numbers = ["1","2","3","4","5"]
         if start_time:
             # self._mqtt_manager.publish("ds/currentSchedule",f"Start: {start_time}, sekcje: {(",".join(section_numbers))}",retain=True)
-            self._mqtt_manager.publish("ds/currentSchedule",self._translator.translate("daily_schedule",sections=(",".join(section_numbers))),retain=True)
+            self._mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,self._translator.translate("daily_schedule",sections=(",".join(section_numbers))),qos=MQTTTopics.CURRENT_SCHEDULE.qos,retain=True)
         else:
             # self._mqtt_manager.publish("ds/currentSchedule",f"Dzień bez podlewania",retain=True)
-            self._mqtt_manager.publish("ds/currentSchedule",self._translator.translate("daily_schedule_empty"),retain=True)
+            self._mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,self._translator.translate("daily_schedule_empty"),qos=MQTTTopics.CURRENT_SCHEDULE.qos,retain=True)
         
 
     def reset_dashboard_buttons(self) -> None:
-        self._mqtt_manager.publish("ds/startSection", 0)
-        self._mqtt_manager.publish("ds/runPump", 0)
+        self._mqtt_manager.publish(MQTTTopics.START_SECTION.topic, 0,qos=MQTTTopics.START_SECTION.qos)
+        self._mqtt_manager.publish(MQTTTopics.RUN_PUMP.topic, 0,qos=MQTTTopics.RUN_PUMP.qos)
         logger.info("Dashboard buttons reset")
 
     def reset_dashboard_button(self,button) -> None:

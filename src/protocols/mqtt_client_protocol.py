@@ -2,7 +2,7 @@ from typing import Protocol
 
 class MqttClientProtocol(Protocol):
 
-    def connect(self,username:str,password:str,broker_adress:str,broker_port:int,tls_enabled:bool):
+    def connect(self,username,password,broker_adress,broker_port,tls_enabled):
         ...
 
     def is_connected(self):
@@ -11,7 +11,7 @@ class MqttClientProtocol(Protocol):
     def disconnect(self):
         ...
 
-    def publish(self,topic,payload,qos,retain) -> int:
+    def publish(self,topic,payload,qos,retain):
         ...
 
     def set_on_connect(self,on_connect_callback):
@@ -26,5 +26,5 @@ class MqttClientProtocol(Protocol):
     def set_on_publish(self,on_publish_callback):
         ...
 
-    def subscribe(self,topics:list[tuple[str,int]]):
+    def subscribe(self,topics):
         ...
