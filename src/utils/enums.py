@@ -14,14 +14,14 @@ class TopicConfig:
         qos: int = 0
 
 class MQTTTopics(Enum):
-        RUN_PUMP = TopicConfig("ds/runPump",2)
-        CHOOSE_SECTION = TopicConfig("ds/choosingSection",1)
-        START_SECTION = TopicConfig("ds/startSection",2)
-        STOP_DEVICE = TopicConfig("ds/stopDevice",2)
-        START_IRRIGATION = TopicConfig("ds/startIrigation",2)
-        ACTIVE_SECTION = TopicConfig("ds/activeSection",1)
-        CURRENT_SCHEDULE = TopicConfig("ds/currentSchedule",1)
-        TIME_INTERVAL = TopicConfig("ds/timeInterval",1)
+        RUN_PUMP = TopicConfig("ds/runPump",0)
+        CHOOSE_SECTION = TopicConfig("ds/choosingSection",0)
+        START_SECTION = TopicConfig("ds/startSection",0)
+        STOP_DEVICE = TopicConfig("ds/stopDevice",0)
+        START_IRRIGATION = TopicConfig("ds/startIrigation",0)
+        ACTIVE_SECTION = TopicConfig("ds/activeSection",0)
+        CURRENT_SCHEDULE = TopicConfig("ds/currentSchedule",0)
+        TIME_INTERVAL = TopicConfig("ds/timeInterval",0)
         DEVICE_TIME = TopicConfig("ds/deviceTime",0)
         @property
         def downlink(self) -> str:
@@ -35,5 +35,5 @@ class MQTTTopics(Enum):
 
         @classmethod
         def get_topics_list(cls) -> list[tuple[str,int]]:
-                return [(topic.value.name, topic.value.qos) for topic in cls]
+                return [(topic.downlink, topic.value.qos) for topic in cls]
                 

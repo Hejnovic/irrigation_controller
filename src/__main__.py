@@ -52,12 +52,13 @@ def on_connect(rc):
         logger.info(f"Connected to MQTT broker at {BROKER}:{PORT} with TLS={TLS_ENABLED}")
         # Subscribe to control pin(s)
         mqtt_manager.subscribe(MQTTTopics.get_topics_list())
-        mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,MQTTTopics.ACTIVE_SECTION.qos, translator.translate("device_idle"))
+        mqtt_manager.publish(MQTTTopics.ACTIVE_SECTION.topic,translator.translate("device_idle"),qos=MQTTTopics.ACTIVE_SECTION.qos)
         mqtt_manager.publish(MQTTTopics.CHOOSE_SECTION.topic, 1, qos=MQTTTopics.CHOOSE_SECTION.qos, retain=True) 
         mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,"",qos=MQTTTopics.CHOOSE_SECTION.qos)
         mqtt_manager.publish(MQTTTopics.TIME_INTERVAL.topic, "",qos=MQTTTopics.TIME_INTERVAL.qos)
         mqtt_manager.publish(MQTTTopics.RUN_PUMP.topic, 0,qos=MQTTTopics.RUN_PUMP.qos) # This resets UI button
         mqtt_manager.publish(MQTTTopics.START_SECTION.topic, 0,qos=MQTTTopics.START_SECTION.qos) # This resets UI button
+        dashboard_updater.update_schedule(scheduler.get_schedule_for_day(time_manager.current_day_of_week))
     else:
         logger.warning(f"Connection failed with code {rc}")
 
@@ -107,7 +108,6 @@ async def main():
     mqtt_manager.set_on_connect(on_connect)
     mqtt_manager.set_on_message(on_message)
     mqtt_manager.set_on_disconnect(on_disconnect)
-    mqtt_manager.connect()
     dashboard_updater.set_mqtt_manager(mqtt_manager)
     dashboard_updater.set_time_manager(time_manager)
     dashboard_updater.set_translator(translator)
@@ -122,6 +122,7 @@ async def main():
     watchdog.register_handler("winter_months.json", scheduler.load_winter_months_from_json_file)
     watchdog.register_handler("weather_adjustment.json",scheduler.load_weather_adjustment_from_json_file)
     watchdog.preload_configs()
+    mqtt_manager.connect()
     await asyncio.gather(
         day_loop(),
         watchdog.watch()

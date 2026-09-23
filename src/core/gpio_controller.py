@@ -215,6 +215,7 @@ class GPIOController:
         temp_schedule = self._scheduler.get_schedule_for_day(new_day)
         if isinstance(temp_schedule,ScheduleEntry):
             self._daily_schedule = temp_schedule
+            self._dashboard_updater.update_schedule(temp_schedule)
         else:
             #Put empty schedule with warning
             self._daily_schedule = ScheduleEntry(start_time=None,sections=[])

@@ -6,11 +6,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def  load_json_file(file: Path):
-    if not file.is_file():
+def  load_json_file(file):
+    path = Path(file)
+    if not path.is_file():
         logger.warning(f"Provided path is not a file - path: {file}")
         return
-    with open(file, 'r') as f:
+    with open(path, 'r') as f:
         try:
             data = json.load(f)
             return data 

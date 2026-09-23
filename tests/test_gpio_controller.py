@@ -564,6 +564,7 @@ def test_set_daily_schedule_sets_daily_schedule_correctly(day):
     controller._gpio.reset_mock()   
     controller._scheduler = Mock()
     controller._daily_schedule = None
+    controller._dashboard_updater = Mock()
     controller._scheduler.get_schedule_for_day.return_value = schedule[day]
 
     #Act
