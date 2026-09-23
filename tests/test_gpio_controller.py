@@ -3,11 +3,12 @@ from src.utils.enums import IrrigationState
 from src.core.gpio_controller import GPIOController
 from src.utils.schedule_entry import ScheduleEntry
 import pytest
-PIN_CONFIG = { "pump": 17, "section1":27, "section2":22 }
+
 ## START IRRIGATION AUTO TESTS
 def test_start_irrigation_auto_does_nothing_when_schedule_empty():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller.set_value = Mock()
     controller._switch_to_next_section = Mock()
     controller._daily_schedule = Mock(sections=[])
@@ -21,7 +22,8 @@ def test_start_irrigation_auto_does_nothing_when_schedule_empty():
 
 def test_start_irrigation_auto_does_nothing_when_schedule_is_none():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller.set_value = Mock()
     controller._switch_to_next_section = Mock()
     controller._daily_schedule = Mock(sections=None)
@@ -35,7 +37,9 @@ def test_start_irrigation_auto_does_nothing_when_schedule_is_none():
     
 def test_start_irrigation_auto_does_correctly_fetch_sections_when_schedule_is_all():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    gpio_builder.get_name_map.return_value = {"section1":15,"section2":25,"section4":15,"pump":12}
+    controller = GPIOController(gpio_builder)
     controller.set_value = Mock()
     controller._switch_to_next_section = Mock()
     controller._daily_schedule = Mock(sections=["all"])
@@ -45,13 +49,14 @@ def test_start_irrigation_auto_does_correctly_fetch_sections_when_schedule_is_al
     
 
     #Assert
-    assert controller._sections_to_irrigate == sorted(controller._pin_mapping.keys() - {"pump"})
+    assert controller._sections_to_irrigate == ["section1","section2","section4"]
     controller.set_value.assert_called_once_with("pump",False)
     controller._switch_to_next_section.assert_called_once()
 
 def test_start_irrigation_auto_switches_to_next_section_when_schedule_not_empty():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._scheduler = Mock()
     controller._time_manager = Mock()
     controller._dashboard_updater = Mock()
@@ -90,7 +95,8 @@ def test_start_irrigation_auto_switches_to_next_section_when_schedule_not_empty(
 ## CHECK IF SHOULD SWITCH SECTION TESTS
 def test_check_if_should_switch_section_triggers_when_time_reached_and_device_is_irrigating():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._time_manager = Mock()
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
@@ -110,7 +116,8 @@ def test_check_if_should_switch_section_triggers_when_time_reached_and_device_is
 
 def test_check_if_should_switch_section_triggers_when_time_is_not_reached_and_device_is_irrigating():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._time_manager = Mock()
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
@@ -129,7 +136,8 @@ def test_check_if_should_switch_section_triggers_when_time_is_not_reached_and_de
 
 def test_check_if_should_switch_section_does_not_trigger_when_device_is_idle():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._time_manager = Mock()
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
@@ -146,7 +154,8 @@ def test_check_if_should_switch_section_does_not_trigger_when_device_is_idle():
 
 def test_check_if_should_switch_section_does_not_trigger_when_device_is_idle_with_fake_data_that_allows_switching():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._time_manager = Mock()
     controller._scheduler = Mock()
     controller._dashboard_updater = Mock()
@@ -168,7 +177,9 @@ def test_check_if_should_switch_section_does_not_trigger_when_device_is_idle_wit
 def test_set_value_turns_on_pin():
     #Arrange
     from gpiod.line import Value
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    gpio_builder.get_name_map.return_value = {"pump":15}
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     
 
@@ -176,25 +187,28 @@ def test_set_value_turns_on_pin():
     controller.set_value("pump", True)
 
     #Assert
-    controller._gpio.set_value.assert_called_once_with(PIN_CONFIG["pump"], Value.ACTIVE)
+    controller._gpio.set_value.assert_called_once_with(15, Value.ACTIVE)
 
 def test_set_value_turns_off_pin():
     #Arrange
     from gpiod.line import Value
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    gpio_builder.get_name_map.return_value = {"section1":15}
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
 
     #Act
     controller.set_value("section1", False)
 
     #Assert
-    controller._gpio.set_value.assert_called_once_with(PIN_CONFIG["section1"], Value.INACTIVE)
+    controller._gpio.set_value.assert_called_once_with(15, Value.INACTIVE)
 
 @pytest.mark.parametrize("input",["string",ScheduleEntry(start_time="12:00",sections=["all"]),2,None,-5])
 def test_set_value_does_nothing_on_wrong_input(input):
     #Arrange
     from gpiod.line import Value
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     
 
@@ -206,7 +220,9 @@ def test_set_value_does_nothing_on_wrong_input(input):
 
 def test_set_value_does_not_act_for_invalid_pin():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    gpio_builder.get_name_map.return_value = {"pump":15}
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
 
     #Act
@@ -218,7 +234,8 @@ def test_set_value_does_not_act_for_invalid_pin():
 ## START SELECTED SECTION TESTS
 def test_start_selected_section_does_nothing_when_state_is_irrigating():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller.set_value = Mock()
     controller.stop_device = Mock()
@@ -234,8 +251,10 @@ def test_start_selected_section_does_nothing_when_state_is_irrigating():
 
 def test_start_selected_section_does_nothing_when_state_is_manual_pump():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
+
     controller.set_value = Mock()
     controller.stop_device = Mock()
 
@@ -251,7 +270,8 @@ def test_start_selected_section_does_nothing_when_state_is_manual_pump():
 
 def test_start_selected_section_stops_device_when_state_is_already_manual_section():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller.set_value = Mock()
     controller.stop_device = Mock()
@@ -268,7 +288,8 @@ def test_start_selected_section_stops_device_when_state_is_already_manual_sectio
 
 def test_start_selected_section_defaults_to_section1_when_chosen_section_is_none():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
@@ -288,7 +309,8 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_none
 
 def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empty_array():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
@@ -308,7 +330,8 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empt
 
 def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empty():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
@@ -328,7 +351,8 @@ def test_start_selected_section_defaults_to_section1_when_chosen_section_is_empt
 
 def test_start_selected_section_runs_chosen_section():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
@@ -349,7 +373,8 @@ def test_start_selected_section_runs_chosen_section():
 ## CHOSE SECTION TESTS
 def test_chose_section_does_nothing_when_section_out_of_range():   
     #Arrange 
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._chosen_section = "section3"
     controller._irrigation_state = IrrigationState.IDLE
     #Act
@@ -361,7 +386,8 @@ def test_chose_section_does_nothing_when_section_out_of_range():
 
 def test_chose_section_changes_section_to_selected():   
     #Arrange 
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._chosen_section = "section3"
     controller._irrigation_state = IrrigationState.IDLE
     #Act
@@ -374,7 +400,8 @@ def test_chose_section_changes_section_to_selected():
 ## RUN PUMP TESTS
 def test_run_pump_starts_when_irrigation_state_is_idle():   
     #Arrange 
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
@@ -389,7 +416,8 @@ def test_run_pump_starts_when_irrigation_state_is_idle():
 
 def test_run_pump_stops_when_irrigation_state_is_manual_pump():   
     #Arrange 
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
@@ -404,7 +432,8 @@ def test_run_pump_stops_when_irrigation_state_is_manual_pump():
 
 def test_run_pump_does_not_interrupt_auto_irrigation():
     #Arrange 
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._dashboard_updater = Mock()
     controller.set_value = Mock()
@@ -420,7 +449,8 @@ def test_run_pump_does_not_interrupt_auto_irrigation():
 ## CHECK IF SHOULD START IRRIGATION TESTS
 def test_check_if_should_start_irrigation_runs_when_device_is_idle_and_all_requirments_are_met():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._time_manager = Mock()
     controller._dashboard_updater = Mock()
@@ -438,7 +468,8 @@ def test_check_if_should_start_irrigation_runs_when_device_is_idle_and_all_requi
 @pytest.mark.parametrize("state",["IRRIGATING","MANUAL_PUMP","MANUAL_SECTION"])
 def test_check_if_should_start_irrigation_does_nothing_when_device_is_not_in_idle_state(state):
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._time_manager = Mock()
     controller._dashboard_updater = Mock()
@@ -458,7 +489,8 @@ def test_check_if_should_start_irrigation_does_nothing_when_device_is_not_in_idl
 
 def test_check_if_should_start_irrigation_does_nothing_when_current_time_is_different_than_start_time():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._time_manager = Mock()
     controller._dashboard_updater = Mock()
@@ -478,7 +510,8 @@ def test_check_if_should_start_irrigation_does_nothing_when_current_time_is_diff
 
 def test_check_if_should_start_irrigation_does_nothing_when_schedule_is_empty():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._time_manager = Mock()
     controller._dashboard_updater = Mock()
@@ -496,7 +529,8 @@ def test_check_if_should_start_irrigation_does_nothing_when_schedule_is_empty():
 
 def test_check_if_should_start_irrigation_does_nothing_when_start_time_is_empty():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller._time_manager = Mock()
     controller._dashboard_updater = Mock()
@@ -525,7 +559,8 @@ def test_set_daily_schedule_sets_daily_schedule_correctly(day):
         "Saturday": ScheduleEntry(start_time="04:00", sections=["all"]),
         "Sunday": ScheduleEntry(start_time=None, sections=[])
     }
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()   
     controller._scheduler = Mock()
     controller._daily_schedule = None
@@ -541,7 +576,8 @@ def test_set_daily_schedule_sets_daily_schedule_correctly(day):
 
 def test_set_daily_schedule_does_not_set_none_as_schedule():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()   
     controller._scheduler = Mock()
     controller._daily_schedule = None
@@ -557,7 +593,8 @@ def test_set_daily_schedule_does_not_set_none_as_schedule():
 
 ## SET TIME MANAGER TESTS
 def test_set_time_manager_sets_callbacks():
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()   
     time_manager = Mock()
 
@@ -572,7 +609,8 @@ def test_set_time_manager_sets_callbacks():
 ## SET_X TESTS
 @pytest.mark.parametrize("module",["time_manager","scheduler","dashboard_updater"])
 def test_set_x_sets_module(module):
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock() 
     the_module = Mock()
     set_module = getattr(controller,f"set_{module}")
@@ -588,7 +626,8 @@ def test_set_x_sets_module(module):
 @pytest.mark.parametrize("module",["time_manager","scheduler","dashboard_updater"])
 def test_set_x_does_not_overrite_x_module(module):
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()   
     private_module = getattr(controller,f"_{module}")
     private_module = Mock()
@@ -607,34 +646,39 @@ def test_set_values_sets_pins_from_correctly_build_dict():
     #Arrange
     values_dict = {"pump":False,"section1":True,"section2":False}
     from gpiod.line import Value
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    gpio_builder.get_name_map.return_value = {"pump":15,"section1":12,"section2":17,"section5":40}
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
 
     #Act
     controller.set_values(values_dict)
 
     #Assert
-    controller._gpio.set_value.assert_has_calls([call(PIN_CONFIG["pump"],Value.INACTIVE),call(PIN_CONFIG["section1"],Value.ACTIVE),call(PIN_CONFIG["section2"],Value.INACTIVE)])
+    controller._gpio.set_value.assert_has_calls([call(15,Value.INACTIVE),call(12,Value.ACTIVE),call(17,Value.INACTIVE)])
 
 
 def test_set_values_ignores_pins_that_do_not_exist():
     #Arrange
     values_dict = {"pump":False,"section1":True,"section3":False,"section5":False,"pump2":True}
     from gpiod.line import Value
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    gpio_builder.get_name_map.return_value = {"pump":15,"section1":20}
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
 
     #Act
     controller.set_values(values_dict)
 
     #Assert
-    controller._gpio.set_value.assert_has_calls([call(PIN_CONFIG["pump"],Value.INACTIVE),call(PIN_CONFIG["section1"],Value.ACTIVE)])
+    controller._gpio.set_value.assert_has_calls([call(15,Value.INACTIVE),call(20,Value.ACTIVE)])
 
 def test_set_values_does_nothing_when_values_are_not_bool():
     #Arrange
     values_dict = {"pump":"lol","section1":None,"section2":[],"section5":ScheduleEntry(start_time=None,sections=None)}
     from gpiod.line import Value
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
 
     #Act
@@ -646,7 +690,8 @@ def test_set_values_does_nothing_when_values_are_not_bool():
 ## SET CALLBACK ON DEVICE STOP TESTS
 def test_set_callback_on_stop_device_sets_callback():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     callback1 = Mock(__name__ = "callback1")
 
@@ -659,7 +704,8 @@ def test_set_callback_on_stop_device_sets_callback():
 @pytest.mark.parametrize("callback",[object(),"callback123",[],(),123,ScheduleEntry(start_time=None,sections=["all"])])
 def test_set_callback_on_stop_device_does_not_set_non_callable(callback):
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
 
     
@@ -672,7 +718,8 @@ def test_set_callback_on_stop_device_does_not_set_non_callable(callback):
 ## CLEANUP TESTS
 def test_cleanup_calls_stop_device_and_sets_gpio_to_none():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller.stop_device = Mock()
 
@@ -685,7 +732,8 @@ def test_cleanup_calls_stop_device_and_sets_gpio_to_none():
 
 def test_cleanup_does_nothing_when_called_when_gpio_is_none():
     #Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller._gpio.reset_mock()
     controller.stop_device = Mock()
     controller._gpio = None
@@ -700,7 +748,8 @@ def test_cleanup_does_nothing_when_called_when_gpio_is_none():
 # EXIT TESTS
 def test_exit_calls_cleanup():
     # Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller.cleanup = Mock()
 
     # Act
@@ -712,7 +761,8 @@ def test_exit_calls_cleanup():
 
 def test_exit_occurs_when_exception_rised():
     # Arrange
-    controller = GPIOController(PIN_CONFIG)
+    gpio_builder = Mock()
+    controller = GPIOController(gpio_builder)
     controller.cleanup = Mock()
 
     #Act

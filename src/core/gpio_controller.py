@@ -11,11 +11,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 class GPIOController:
-
-    
-    def __init__(self, pin_mapping: dict[str, int], chip = "/dev/gpiochip0", consumer="irrigation_controller"):
+    def __init__(self, gpio_builder, chip = "/dev/gpiochip0", consumer="irrigation_controller"):
         self._daily_schedule:ScheduleEntry =  ScheduleEntry(start_time=None,sections=[])
-        self._pin_mapping: dict[str,int] = pin_mapping
+        self._pin_mapping: dict[str,int] = gpio_builder.get_name_map()
         self._chosen_section: str | None = None
         self._time_manager: TimeManagerProtocol | None = None
         self._scheduler: SchedulerProtocol | None = None
@@ -26,14 +24,7 @@ class GPIOController:
         self._time_end = None
         self._start_time = None
         self._callback_on_stop_device: list[Callable] = []
-        config = { # Only outputs so far TODO TOTAL REWORK OF THIS 
-            pin: gpiod.LineSettings(
-                direction=Direction.OUTPUT,
-                output_value=Value.ACTIVE
-            )
-            for pin in pin_mapping.values()
-        }
-        
+        config = gpio_builder.get_line_config()
         self._gpio = gpiod.request_lines(
             chip,
             consumer=consumer,
@@ -147,7 +138,7 @@ class GPIOController:
         self._irrigation_state = IrrigationState.IRRIGATING
         self.set_value("pump", False)
         self._start_time = self._time_manager.current_hour_minute
-        self._sections_to_irrigate = sorted(self._pin_mapping.keys() - {"pump"}) #TODO Better way of getting all secionts (requires pin_config loading rework)
+        self._sections_to_irrigate = sorted(k for k in self._pin_mapping.keys() if k.startswith("section"))
         self._switch_to_next_section()
         
     ## MANUAL END
@@ -186,7 +177,7 @@ class GPIOController:
             logger.info("No sections to irrigate, skipping irrigation")
             return
         if self._daily_schedule.sections == ["all"]:
-            self._sections_to_irrigate = sorted(self._pin_mapping.keys() - {"pump"}) # If adding some sensor or smth this won't work - workaround maybe sorted(k for k in self._pin_mapping.keys() if k.startswithc("section") - assuming user names sections - sectionX
+            self._sections_to_irrigate = sorted(k for k in self._pin_mapping.keys() if k.startswith("section")) # If adding some sensor or smth this won't work - workaround maybe sorted(k for k in self._pin_mapping.keys() if k.startswithc("section") - assuming user names sections - sectionX
         else:
             self._sections_to_irrigate = sorted(self._daily_schedule.sections)
         self.set_value("pump", False)

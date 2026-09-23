@@ -26,7 +26,7 @@ class Translator:
                 if not isinstance(data,dict):
                     return
                 self._translations[path.stem] = data
-            logger.info("Loaded existing translations to memory")
+            logger.info(f"Loaded existing translations to memory: {self._translations.keys()}")
 
     def set_locale(self, locale:str)-> None:
         locale_lc = locale.lower()
@@ -37,9 +37,10 @@ class Translator:
         logger.info(f"Locale set to {locale_lc}")
 
     def translate(self, key:str, **kwargs) -> str:
-        text = self._translations.get(self._locale).get(key) or self._default_locale.get(key) #Loads selected locale - if does not exist will use default one
+        text = self._translations.get(self._locale).get(key) or self._default_locale.get(key) #Use selected locale - if does not exist will use default one
 
         if text is None:
+            logger.warning(f"Missing translation for key: {key}")
             return key
 
         if not kwargs:

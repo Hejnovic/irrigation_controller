@@ -9,12 +9,14 @@ from .utils.load_logger_config_yml import load_logging_config_yml
 from .adapters.paho_mqtt_adapter import PahoMqttAdapter
 from .utils.translator import Translator
 from .utils.enums import MQTTTopics
+from .utils.gpiod_config_builder import GPIOBuilder
+from .utils.json_loader import load_json_file
 import os
 from pathlib import Path
 
 
 
-
+import json
 import logging
 import asyncio
 
@@ -29,32 +31,13 @@ PORT = int(os.environ["MQTT_PORT"])
 TLS_ENABLED = bool(os.environ["MQTT_TLS_ENABLED"])
 LOCALE = os.environ["LOCALE"]
 DIR_PATH = Path(__file__).resolve().parent
-
-
-PIN_CONFIG = { #Make it dynamic from config file TODO TOTAL REWORK 
-    "pump": 17,
-    "section1": 22,
-    "section2": 23,
-    "section3": 24,
-    "section4": 25,
-    "section5": 27
-}
-"""NEW PIN CONFIG 
-PIN_CONFIG={
-    "inputs":{
-    "input1":pin1,arg1,arg2 # During building use .get(key,default) method to supply all fields required by gpiod
-    }
-    "outputs":{
-    "output1":pin2,arg1
-    "output2":pin3
-    }
-}
+PIN_CONFIG = load_json_file(f"{DIR_PATH}/configs/irrigation_configs/pin_config.json")
 
 
 
- """
 cleanup_manager = CleanupManager()
-gpio_controller = GPIOController(PIN_CONFIG)
+gpiod_config_builder = GPIOBuilder(PIN_CONFIG)
+gpio_controller = GPIOController(gpiod_config_builder)
 scheduler = Scheduler()
 client = PahoMqttAdapter()
 mqtt_manager = MQTTManager(client,BROKER, PORT, username="device", password=BLYNK_AUTH, tls_enabled=TLS_ENABLED)
@@ -90,10 +73,10 @@ def on_message(msg):
                 gpio_controller.choose_section(int(payload))
             case MQTTTopics.START_SECTION.downlink:
                 gpio_controller.start_selected_section()
-            case MQTTTopics.STOP_DEVICE.downlink:
+            case MQTTTopics.STOP_DEVICE.downlink: #Clicking button sends 1 when pressed and 0 instantly when you lift finger
                 if int(payload) == 1:
                     gpio_controller.stop_device()
-            case MQTTTopics.START_IRRIGATION.downlink:
+            case MQTTTopics.START_IRRIGATION.downlink: #The same as STOP_DEVICE 
                 if int(payload) == 1:
                     gpio_controller.start_manual_irrigation()
             case _:
