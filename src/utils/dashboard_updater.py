@@ -104,10 +104,10 @@ class DashboardUpdater:
         section_numbers = sorted([section[-1] for section in sections])
         if section_numbers == ["l"]:
             section_numbers = ["1","2","3","4","5"]
-        if start_time:
+        if start_time not in ["None",None]:  #"None" evaluates to True
             # self._mqtt_manager.publish("ds/currentSchedule",f"Start: {start_time}, sekcje: {(",".join(section_numbers))}",retain=True)
             self._mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,self._translator.translate("daily_schedule",start_time=start_time,sections=(",".join(section_numbers))),qos=MQTTTopics.CURRENT_SCHEDULE.qos)
-        else:
+        else: 
             # self._mqtt_manager.publish("ds/currentSchedule",f"Dzień bez podlewania",retain=True)
             self._mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,self._translator.translate("daily_schedule_empty"),qos=MQTTTopics.CURRENT_SCHEDULE.qos)
         
