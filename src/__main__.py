@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 load_logging_config_yml(logger=logger)
 
 
-BLYNK_AUTH = os.environ["BLYNK_AUTH"]
+PASSWORD = os.environ["PASSWORD"]
 BROKER = os.environ["MQTT_BROKER"]
 PORT = int(os.environ["MQTT_PORT"])
 TLS_ENABLED = bool(os.environ["MQTT_TLS_ENABLED"])
@@ -40,7 +40,7 @@ gpiod_config_builder = GPIOBuilder(PIN_CONFIG)
 gpio_controller = GPIOController(gpiod_config_builder)
 scheduler = Scheduler()
 client = PahoMqttAdapter()
-mqtt_manager = MQTTManager(client,BROKER, PORT, username="device", password=BLYNK_AUTH, tls_enabled=TLS_ENABLED)
+mqtt_manager = MQTTManager(client,BROKER, PORT, username="device", password=PASSWORD, tls_enabled=TLS_ENABLED)
 time_manager = TimeManager()
 dashboard_updater = DashboardUpdater()
 watchdog = Watchdog((DIR_PATH/"configs").resolve())
