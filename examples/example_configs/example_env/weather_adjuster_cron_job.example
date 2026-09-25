@@ -1,0 +1,7 @@
+$ nano /etc/cron.d/weather_adjuster
+0 0 * * * "your_user" your_venv_python_path path_to_script/weather_adjuster.py 
+This will run it every time when day changes
+
+NOTE:
+Right now you have to go and edit weather_adjuster.py and put there your path to .env file you have created
+

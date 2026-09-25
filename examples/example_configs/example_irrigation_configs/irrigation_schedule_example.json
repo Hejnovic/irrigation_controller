@@ -1,0 +1,9 @@
+{
+  "Monday": { "start_time": "04:00", "sections": ["all"] },
+  "Tuesday": { "start_time": "04:00", "sections": ["section3"] },
+  "Wednesday": { "start_time": "04:00", "sections": ["all"] },
+  "Thursday": { "start_time": "None", "sections": ["None"] },
+  "Friday": { "start_time": "04:00", "sections": ["section1", "section3"] },
+  "Saturday": { "start_time": "04:00", "sections": ["all"] },
+  "Sunday": { "start_time": "None", "sections": ["None"] }
+}

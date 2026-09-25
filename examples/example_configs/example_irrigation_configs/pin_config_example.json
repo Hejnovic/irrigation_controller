@@ -1,0 +1,13 @@
+{
+  "inputs": {
+    "water_flow_sensor": { "pin": 10, "edge_detection": "Edge.RISING" }
+  },
+  "outputs": {
+    "pump": { "pin": 17 },
+    "section1": { "pin": 22, "output_value": "Value.ACTIVE" },
+    "section2": { "pin": 23 },
+    "section3": { "pin": 24 },
+    "section4": { "pin": 25 },
+    "section5": { "pin": 27 }
+  }
+}
