@@ -1,0 +1,22 @@
+[Unit]
+Description= Irrigation system
+After=network-online.target
+
+[Service]
+User=your service user
+Group=your service group
+
+WorkingDirectory=your_working_directory
+EnvironmentFile=your_env_path/irrigation.env
+ExecStart=your_python_venv_path/bin/python -m src (--log-config ../logs/logging.yml <- optional if you want to load your own logging config) 
+
+Restart=always
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=your_logs_path/logs /dev/gpiomem
+
+[Install]
+WantedBy=multi-user.target
