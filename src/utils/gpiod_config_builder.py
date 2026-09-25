@@ -11,13 +11,13 @@ class GPIOBuilder():
     def _build_line_settings(self,cfg:dict,direction:Direction) -> gpiod.LineSettings:
         return  gpiod.LineSettings( #All defaults are taken from gpiod docs
             direction=direction,
-            edge_detection=cfg.get("edge_detection", Edge.NONE),
-            bias=cfg.get("bias", Bias.AS_IS),
-            drive=cfg.get("drive", Drive.PUSH_PULL),   
-            active_low=cfg.get("active_low", False),
-            debounce_period=cfg.get("debounce_period", datetime.timedelta(0)),
-            event_clock=cfg.get("event_clock", Clock.MONOTONIC),
-            output_value=cfg.get("output_value", Value.INACTIVE),
+            edge_detection=self._resolve_enum(cfg.get("edge_detection"),Edge,Edge.NONE),
+            bias=self._resolve_enum(cfg.get("bias"),Bias,Bias.AS_IS),
+            drive=self._resolve_enum(cfg.get("drive"),Drive,Drive.PUSH_PULL),   
+            active_low=cfg.get("active_low", False), #True from json is True in python
+            debounce_period=datetime.timedelta(cfg.get("debounce_period", 0)), #In seconds
+            event_clock=self._resolve_enum(cfg.get("event_clock"),Clock,Clock.MONOTONIC),
+            output_value=self._resolve_enum(cfg.get("output_value"),Value,Value.INACTIVE),
         )
 
     def _build_line_config(self):
@@ -36,6 +36,17 @@ class GPIOBuilder():
             line_config[pin]= self._build_line_settings(cfg,Direction.OUTPUT)
 
         return line_config
+
+    def _resolve_enum(self,value,enum_cls,default):
+        if value is None:
+            return default
+        
+        if isinstance(value,str):
+            name = value.split(".")[-1] # From "Drive.PUSH_PULL" -> "PUSH_PULL"
+            try:
+                return enum_cls[name] #Drive["PUSH_PULL"] should resolve to Drive.PUSH_PULL
+            except KeyError:
+                raise ValueError(f"Enum {enum_cls.__name__} does not have member: {name}")
 
     def get_name_map(self):
         return self._name_map
