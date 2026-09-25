@@ -10,7 +10,7 @@ HOW TO USE
 
 1. Fetch src folder from repository.
 2. Create your own .env file and config files (look in example folder)
-3. If you want to use OpenWeather create account there and create additional .env for /utils/weather_adjuster.py script and run it as cron job (I run it one a day)
+3. If you want to use OpenWeather create account there and create additional .env for /utils/weather_adjuster.py script and run it as cron job (I run it once a day)
 4. On RaspberryPi create a venv and download all needed dependencies
 5. Then use python -m src (--log-config log_config.yml if you want custom logger config)
 6. Best way to use it is through systemd service (look in example folder)
