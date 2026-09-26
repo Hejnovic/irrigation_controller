@@ -30,6 +30,7 @@ class GPIOController:
             consumer=consumer,
             config=config
         )
+        self.stop_device()
         logger.info(f"GPIO lines requested: {self._pin_mapping}")
 
     def set_time_manager(self, time_manager: TimeManagerProtocol):
@@ -144,7 +145,7 @@ class GPIOController:
     ## MANUAL END
     def stop_device(self):
         all_inactive = { #It is flipped because of relay module, setting pin to ACTIVE actually turns it off
-            pin: True for pin in self._pin_mapping.keys() #TODO Rework after pin_config loading changes
+            pin: True for pin in self._config["outputs"].keys()
         }
         self.set_values(all_inactive)
         self._start_time = None
@@ -234,8 +235,4 @@ class GPIOController:
             logger.info("GPIO controller cleaned up")
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
-    
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.cleanup()
-        logger.info("GPIO lines released on exit")
 
