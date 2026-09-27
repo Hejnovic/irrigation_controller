@@ -6,7 +6,10 @@ configs/
 __pycache__/
 *.py[codz]
 *$py.class
-
+*cache*
+*.kicad_pro
+*.kicad_prl
+*.kicad_pcb
 # C extensions
 *.so
 

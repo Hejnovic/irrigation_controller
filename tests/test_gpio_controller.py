@@ -19,6 +19,7 @@ def test_start_irrigation_auto_does_nothing_when_schedule_empty():
     #Assert
     controller.set_value.assert_not_called()
     controller._switch_to_next_section.assert_not_called()
+    assert IrrigationState.MANUAL_PUMP == IrrigationState["MANUAL_PUMP"]
 
 def test_start_irrigation_auto_does_nothing_when_schedule_is_none():
     #Arrange
