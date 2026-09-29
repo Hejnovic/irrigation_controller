@@ -111,6 +111,7 @@ async def main():
     dashboard_updater.set_mqtt_manager(mqtt_manager)
     dashboard_updater.set_time_manager(time_manager)
     dashboard_updater.set_translator(translator)
+    dashboard_updater.set_name_map(gpiod_config_builder.get_name_map())
     scheduler.set_time_manager(time_manager)
     scheduler.set_callback_on_schedule_change(gpio_controller.set_daily_schedule)
     gpio_controller.set_time_manager(time_manager)
