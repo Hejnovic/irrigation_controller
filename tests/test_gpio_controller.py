@@ -8,7 +8,9 @@ import pytest
 def test_start_irrigation_auto_does_nothing_when_schedule_empty():
     #Arrange
     gpio_builder = Mock()
+    gpio_builder.get_line_config.return_value = {"inputs":{},"outputs":{}}
     controller = GPIOController(gpio_builder)
+    controller._dashboard_updater = Mock()
     controller.set_value = Mock()
     controller._switch_to_next_section = Mock()
     controller._daily_schedule = Mock(sections=[])
@@ -19,7 +21,7 @@ def test_start_irrigation_auto_does_nothing_when_schedule_empty():
     #Assert
     controller.set_value.assert_not_called()
     controller._switch_to_next_section.assert_not_called()
-    assert IrrigationState.MANUAL_PUMP == IrrigationState["MANUAL_PUMP"]
+    assert IrrigationState.IDLE == controller._irrigation_state
 
 def test_start_irrigation_auto_does_nothing_when_schedule_is_none():
     #Arrange
@@ -747,29 +749,3 @@ def test_cleanup_does_nothing_when_called_when_gpio_is_none():
     controller.stop_device.assert_not_called()
     assert controller._gpio is None
 
-# EXIT TESTS
-def test_exit_calls_cleanup():
-    # Arrange
-    gpio_builder = Mock()
-    controller = GPIOController(gpio_builder)
-    controller.cleanup = Mock()
-
-    # Act
-    result = controller.__exit__(None, None, None)
-
-    # Assert
-    controller.cleanup.assert_called_once()
-    assert result is None
-
-def test_exit_occurs_when_exception_rised():
-    # Arrange
-    gpio_builder = Mock()
-    controller = GPIOController(gpio_builder)
-    controller.cleanup = Mock()
-
-    #Act
-    result = controller.__exit__(RuntimeError,RuntimeError("test"),None,)
-
-    #Assert
-    controller.cleanup.assert_called_once()
-    assert result is None

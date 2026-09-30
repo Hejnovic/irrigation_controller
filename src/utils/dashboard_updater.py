@@ -106,11 +106,11 @@ class DashboardUpdater:
         sections = schedule.sections
         #sections are either ["all"], [] or ["section1","section2"] or None
         #start time is string HH:MM example: 05:25
-        section_numbers = sorted([int(section.removeprefix("section")) for section in sections])
-        if section_numbers == ["l"] and self._name_map:
+        section_numbers = sorted([int(section.removeprefix("section")) for section in sections if section.startswith("section")])
+        if sections == ["all"] and self._name_map:
                 section_numbers = [int(name.removeprefix("section")) for name in self._name_map.keys() if name.startswith("section")]
         if start_time not in ["None",None]:  #"None" evaluates to True
-            self._mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,self._translator.translate("daily_schedule",start_time=start_time,sections=(",".join(section_numbers))),qos=MQTTTopics.CURRENT_SCHEDULE.qos)
+            self._mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,self._translator.translate("daily_schedule",start_time=start_time,sections=(",".join(str(section_numbers)))),qos=MQTTTopics.CURRENT_SCHEDULE.qos)
         else: 
             self._mqtt_manager.publish(MQTTTopics.CURRENT_SCHEDULE.topic,self._translator.translate("daily_schedule_empty"),qos=MQTTTopics.CURRENT_SCHEDULE.qos)
         

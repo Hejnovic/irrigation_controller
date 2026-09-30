@@ -24,13 +24,12 @@ class GPIOController:
         self._time_end = None
         self._start_time = None
         self._callback_on_stop_device: list[Callable] = []
-        config = gpio_builder.get_line_config()
+        self._config = gpio_builder.get_line_config()
         self._gpio = gpiod.request_lines(
             chip,
             consumer=consumer,
-            config=config
+            config=self._config
         )
-        self.stop_device()
         logger.info(f"GPIO lines requested: {self._pin_mapping}")
 
     def set_time_manager(self, time_manager: TimeManagerProtocol):

@@ -141,6 +141,7 @@ def test_update_schedule_with_sections_all():
     dashboard_updater._time_manager = Mock()
     dashboard_updater._translator = Mock()
     dashboard_updater._translator.translate.return_value = "XXX"
+    dashboard_updater._name_map = {"section1":16,"pump":10,"section4":20,"section10":11}
 
     #Act
     dashboard_updater.update_schedule(ScheduleEntry(start_time="04:00",sections=["all"]))
